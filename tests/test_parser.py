@@ -84,6 +84,64 @@ class TestXParser(unittest.TestCase):
         self.assertIn("5 reposts", summary)
         self.assertIn("1 imagem", summary)
 
+    def test_parse_modern_graphql_with_core_user(self):
+        # Novo formato onde name e screen_name estão em user_results.result.core
+        payload = {
+            "data": {
+                "home": {
+                    "home_timeline_ux": {
+                        "timeline": {
+                            "instructions": [
+                                {
+                                    "type": "TimelineAddEntries",
+                                    "entries": [
+                                        {
+                                            "entryId": "tweet-999999",
+                                            "content": {
+                                                "entryType": "TimelineTimelineItem",
+                                                "itemContent": {
+                                                    "itemType": "TimelineTweet",
+                                                    "tweet_results": {
+                                                        "result": {
+                                                            "__typename": "Tweet",
+                                                            "rest_id": "999999",
+                                                            "core": {
+                                                                "user_results": {
+                                                                    "result": {
+                                                                        "__typename": "User",
+                                                                        "core": {
+                                                                            "name": "Canaltech",
+                                                                            "screen_name": "canaltech"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            },
+                                                            "legacy": {
+                                                                "created_at": "Wed Oct 14 10:00:00 +0000 2026",
+                                                                "full_text": "Notícia recente sobre tecnologia.",
+                                                                "favorite_count": 100,
+                                                                "retweet_count": 20
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+
+        posts = parse_x_graphql_response(payload)
+        self.assertEqual(len(posts), 1)
+        self.assertEqual(posts[0].author_name, "Canaltech")
+        self.assertEqual(posts[0].author_username, "canaltech")
+
 
 if __name__ == "__main__":
     unittest.main()
+

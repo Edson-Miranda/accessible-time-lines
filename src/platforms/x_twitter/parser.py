@@ -51,10 +51,11 @@ def _parse_single_tweet(tweet_data: Dict[str, Any]) -> Optional[Post]:
     legacy = node.get("legacy", {})
     core = node.get("core", {})
     user_results = core.get("user_results", {}).get("result", {})
-    user_node = user_results.get("legacy", {})
+    user_core = user_results.get("core", {})
+    user_legacy = user_results.get("legacy", {})
 
-    author_name = user_node.get("name", "Usuário Desconhecido")
-    author_username = user_node.get("screen_name", "desconhecido")
+    author_name = user_core.get("name") or user_legacy.get("name") or user_results.get("name") or "Usuário Desconhecido"
+    author_username = user_core.get("screen_name") or user_legacy.get("screen_name") or user_results.get("screen_name") or "desconhecido"
 
     # Tratamento de Retweet
     is_retweet = False
@@ -67,9 +68,11 @@ def _parse_single_tweet(tweet_data: Dict[str, Any]) -> Optional[Post]:
         if orig_node:
             node = orig_node
             legacy = node.get("legacy", {})
-            orig_user = node.get("core", {}).get("user_results", {}).get("result", {}).get("legacy", {})
-            author_name = orig_user.get("name", author_name)
-            author_username = orig_user.get("screen_name", author_username)
+            orig_user_res = node.get("core", {}).get("user_results", {}).get("result", {})
+            orig_user_core = orig_user_res.get("core", {})
+            orig_user_legacy = orig_user_res.get("legacy", {})
+            author_name = orig_user_core.get("name") or orig_user_legacy.get("name") or orig_user_res.get("name") or author_name
+            author_username = orig_user_core.get("screen_name") or orig_user_legacy.get("screen_name") or orig_user_res.get("screen_name") or author_username
 
     # Texto
     text = legacy.get("full_text", "")

@@ -2,7 +2,7 @@
 Gerenciador do ciclo de vida do navegador Chromium para o X.
 Utiliza perfil de dados persistente (mantendo cookies e sessão).
 Executa em thread dedicada em segundo plano com fila de comandos sem bloquear a interface gráfica.
-Permite exibir ou ocultar a janela do navegador a qualquer momento.
+Permite exibir ou ocultar a janela do navegador a qualquer momento via Win32 ShowWindow.
 """
 
 import ctypes
@@ -28,23 +28,23 @@ SW_MINIMIZE = 6
 SW_RESTORE = 9
 
 
-def _find_browser_windows(pid: int) -> list[int]:
-    """Localiza as janelas pertencentes ao processo do navegador via Win32 API."""
+def _find_browser_windows() -> list[int]:
+    """Localiza as janelas pertencentes ao Chromium do Accessible Timeline."""
     hwnds = []
 
     def enum_windows_callback(hwnd, extra):
-        if ctypes.windll.user32.IsWindowVisible(hwnd) or True:
-            window_pid = ctypes.c_ulong()
-            ctypes.windll.user32.GetWindowThreadProcessId(hwnd, ctypes.byref(window_pid))
-            if window_pid.value == pid:
-                # Verifica se tem título ou estilo de janela principal
+        cls = ctypes.create_unicode_buffer(256)
+        ctypes.windll.user32.GetClassNameW(hwnd, cls, 256)
+        if cls.value == "Chrome_WidgetWin_1":
+            parent = ctypes.windll.user32.GetParent(hwnd)
+            if parent == 0:
                 length = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
-                if length > 0:
-                    buff = ctypes.create_unicode_buffer(length + 1)
-                    ctypes.windll.user32.GetWindowTextW(hwnd, buff, length + 1)
-                    title = buff.value
-                    if "Twitter" in title or "X" in title or "Chrome" in title:
-                        hwnds.append(hwnd)
+                buff = ctypes.create_unicode_buffer(length + 1)
+                ctypes.windll.user32.GetWindowTextW(hwnd, buff, length + 1)
+                title = buff.value
+                # Filtra janelas do X/Twitter ou Chromium
+                if any(k in title for k in ["X", "Twitter", "Chromium", "Chrome"]):
+                    hwnds.append(hwnd)
         return True
 
     try:
@@ -69,9 +69,9 @@ class XBrowserManager:
         self._thread: Optional[threading.Thread] = None
         self._cmd_queue: queue.Queue = queue.Queue()
         self._running = False
-        self._is_visible = True
-        self._browser_hwnds: list[int] = []
-        self._browser_pid: Optional[int] = None
+        self._is_visible = False
+        self._logged_in = False
+        self._posts_received_count = 0
 
         self.on_posts_callback: Optional[Callable[[list[Post]], None]] = None
         self.on_status_callback: Optional[Callable[[str], None]] = None
@@ -84,7 +84,7 @@ class XBrowserManager:
             except Exception as e:
                 logger.error(f"Erro no callback de status: {e}")
 
-    def start(self, on_posts: Callable[[list[Post]], None], on_status: Optional[Callable[[str], None]] = None, start_visible: bool = True):
+    def start(self, on_posts: Callable[[list[Post]], None], on_status: Optional[Callable[[str], None]] = None, start_visible: bool = False):
         """Inicia a thread do navegador."""
         self.on_posts_callback = on_posts
         self.on_status_callback = on_status
@@ -133,15 +133,7 @@ class XBrowserManager:
 
     def _apply_window_visibility(self, visible: bool):
         """Aplica visibilidade usando Win32 ShowWindow nos HWNDs do navegador."""
-        if not self._browser_pid:
-            return
-
-        hwnds = _find_browser_windows(self._browser_pid)
-        if not hwnds and self._browser_hwnds:
-            hwnds = self._browser_hwnds
-        else:
-            self._browser_hwnds = hwnds
-
+        hwnds = _find_browser_windows()
         for hwnd in hwnds:
             if visible:
                 ctypes.windll.user32.ShowWindow(hwnd, SW_RESTORE)
@@ -161,11 +153,25 @@ class XBrowserManager:
                     if body:
                         payload = json.loads(body)
                         posts = parse_x_graphql_response(payload)
-                        if posts and self.on_posts_callback:
-                            self.on_posts_callback(posts)
+                        if posts:
+                            self._posts_received_count += len(posts)
+                            logger.info(f"Interceptadas {len(posts)} publicações de {url}")
+                            if self.on_posts_callback:
+                                self.on_posts_callback(posts)
             except Exception as e:
-                # Resposta pode não ser JSON ou ter sido abortada
-                pass
+                logger.debug(f"Aviso ao processar resposta da rede: {e}")
+
+    def _check_auth_status(self, context: BrowserContext) -> bool:
+        """Verifica se os cookies essenciais de autenticação do X estão presentes."""
+        try:
+            cookies = context.cookies()
+            for c in cookies:
+                if "x.com" in c.get("domain", "") or "twitter.com" in c.get("domain", ""):
+                    if c.get("name") == "auth_token":
+                        return True
+        except Exception:
+            pass
+        return False
 
     def _worker_loop(self):
         """Loop executado na thread de segundo plano."""
@@ -185,21 +191,38 @@ class XBrowserManager:
                     ],
                 )
 
+                # Escuta passiva de respostas de rede no contexto inteiro
+                context.on("response", self._handle_response)
+
                 page: Page = context.pages[0] if context.pages else context.new_page()
 
-                # Escuta passiva de respostas de rede
-                page.on("response", self._handle_response)
+                # Verifica se o usuário já possui sessão autenticada salva
+                already_authenticated = self._check_auth_status(context)
+                self._logged_in = already_authenticated
 
-                self._set_status("Acessando X (antigo Twitter)...")
+                if already_authenticated:
+                    self._set_status("Sessão autenticada detectada. Acessando timeline...")
+                    # Oculta o navegador já que o usuário já está logado
+                    time.sleep(0.5)
+                    self._apply_window_visibility(False)
+                    self._is_visible = False
+                else:
+                    self._set_status("Aguardando login no navegador. Pressione F11 se precisar exibir a janela.")
+                    self._is_visible = True
+
                 try:
                     page.goto("https://x.com/home", wait_until="domcontentloaded", timeout=45000)
                 except Exception as e:
                     logger.warning(f"Aviso no carregamento inicial: {e}")
 
-                self._set_status("Pronto. Monitorando publicações da timeline...")
+                if self._logged_in:
+                    # Aplica ocultação após o carregamento inicial
+                    self._apply_window_visibility(False)
+                    self._is_visible = False
+
+                last_auth_check = time.time()
 
                 # Loop de comandos e manutenção
-                last_check_time = time.time()
                 while self._running:
                     # Processa comandos da fila
                     try:
@@ -223,6 +246,24 @@ class XBrowserManager:
                                 logger.warning(f"Erro ao rolar: {e}")
                     except queue.Empty:
                         pass
+
+                    # Checagem periódica de login (a cada 2 segundos)
+                    now = time.time()
+                    if now - last_auth_check > 2.0:
+                        last_auth_check = now
+                        is_auth = self._check_auth_status(context)
+                        if is_auth and not self._logged_in:
+                            self._logged_in = True
+                            self._set_status("Login detectado com sucesso! Carregando timeline...")
+                            # Oculta a janela do navegador automaticamente
+                            self._apply_window_visibility(False)
+                            self._is_visible = False
+                            # Se ainda não recebeu postagens, recarrega a home para disparar o HomeTimeline
+                            if self._posts_received_count == 0:
+                                try:
+                                    page.goto("https://x.com/home", wait_until="domcontentloaded", timeout=30000)
+                                except Exception as e:
+                                    logger.warning(f"Erro ao navegar para home após login: {e}")
 
                     # Mantém o loop responsivo
                     time.sleep(0.05)

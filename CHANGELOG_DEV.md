@@ -4,6 +4,22 @@ Este documento registra todas as alterações técnicas, refatorações e adiç�
 
 ---
 
+## [0.1.0-dev.2] - 2026-10-14
+
+### Corrigido
+- **Controle de Visibilidade do Navegador**:
+  - Correção na localização de janelas Win32 do Chromium (`Chrome_WidgetWin_1`), permitindo ocultar e reexibir a janela do navegador de forma confiável via `F11`.
+  - Implementação de detecção automática de login (`auth_token`): ao concluir o login, a janela do Chromium é ocultada automaticamente para que o usuário permaneça focado na interface acessível.
+  - Se o usuário já estiver autenticado em execuções posteriores, o navegador inicia diretamente oculto.
+- **Extração e Atualização da Timeline**:
+  - Correção no `parser.py` para compatibilidade com o esquema recente de respostas GraphQL do X, onde `name` e `screen_name` dos autores residem em `user_results.result.core`.
+  - Interceptação de respostas de rede transferida para o nível do `BrowserContext`, garantindo que requisições de qualquer aba ou fluxo de redirecionamento sejam capturadas.
+  - Gatilho automático de carregamento da home caso o login seja concluído sem postagens carregadas anteriormente.
+- **Testes**:
+  - Adição do teste unitário `test_parse_modern_graphql_with_core_user` em `tests/test_parser.py`.
+
+---
+
 ## [0.1.0-dev.1] - 2026-10-14
 
 ### Adicionado
