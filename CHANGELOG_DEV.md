@@ -4,6 +4,23 @@ Este documento registra todas as alterações técnicas, refatorações e adiç�
 
 ---
 
+## [0.1.0-dev.3] - 2026-10-14
+
+### Adicionado
+- **Suporte a Múltiplas Guias ('Para você' e 'Seguindo')**:
+  - Implementação de controle de abas nativo Win32 (`wx.Notebook` / `SysTabControl32`) dividindo as postagens entre os feeds **Para você** (Home) e **Seguindo** (Following), inspirado no TWBlue.
+  - Cada guia possui sua própria lista independente (`wx.ListCtrl`) e seu próprio `TimelineStore` isolado, garantindo posições de leitura e históricos separados.
+  - Navegação fluida via teclado:
+    - `Shift + Tab` a partir da lista move o foco para o cabeçalho de guias (`SysTabControl32`), onde o leitor de telas anuncia a guia selecionada e sua posição (ex.: "Para você guia selecionada 1 de 2"). Setas Esquerda/Direita trocam a guia e `Tab` retorna à lista correspondente.
+    - Atalho direto `Control + Windows + Seta Direita` e `Control + Windows + Seta Esquerda` para alternância imediata de qualquer lugar.
+    - Suporte aos atalhos `Ctrl + Tab` e `Ctrl + Shift + Tab`.
+- **Sincronização com o Navegador**:
+  - `XBrowserManager` e `XTimelineReader` agora identificam a origem das respostas da API do X (`HomeTimeline` para 'Para você' e `HomeLatestTimeline` para 'Seguindo').
+  - Método `switch_feed_tab` clica na aba correspondente no site do X (`role="tab"`), acionando o carregamento dinâmico do feed solicitado.
+  - Atualização com `F5` agora recarrega a guia ativa no momento.
+
+---
+
 ## [0.1.0-dev.2] - 2026-10-14
 
 ### Corrigido

@@ -17,25 +17,29 @@ class XTimelineReader(BaseTimelineReader):
     def __init__(self, browser_manager: Optional[XBrowserManager] = None):
         self.browser_manager = browser_manager or XBrowserManager()
 
-    def start(self, on_posts_received: Callable[[List[Post]], None], on_status_change: Optional[Callable[[str], None]] = None):
+    def start(self, on_posts_received: Callable[[str, List[Post]], None], on_status_change: Optional[Callable[[str], None]] = None):
         """Inicia a captura e monitoramento passivo de publicações."""
         self.browser_manager.start(
             on_posts=on_posts_received,
             on_status=on_status_change,
-            start_visible=True  # Exibe no início para o usuário fazer login se necessário
+            start_visible=False
         )
 
     def stop(self):
         """Interrompe a captura."""
         self.browser_manager.stop()
 
-    def refresh(self):
-        """Solicita recarregamento da timeline."""
-        self.browser_manager.reload_timeline()
+    def refresh(self, feed: Optional[str] = None):
+        """Solicita recarregamento da timeline (específica ou atual)."""
+        self.browser_manager.reload_timeline(feed)
 
     def load_more(self):
         """Solicita rolagem para carregar mais publicações."""
         self.browser_manager.scroll_down()
+
+    def switch_feed_tab(self, feed: str):
+        """Comanda o navegador a alternar entre 'home' e 'following'."""
+        self.browser_manager.switch_feed_tab(feed)
 
     def toggle_browser_visibility(self):
         """Alterna a visibilidade da janela do navegador."""

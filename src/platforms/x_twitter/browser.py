@@ -2,7 +2,8 @@
 Gerenciador do ciclo de vida do navegador Chromium para o X.
 Utiliza perfil de dados persistente (mantendo cookies e sessão).
 Executa em thread dedicada em segundo plano com fila de comandos sem bloquear a interface gráfica.
-Permite exibir ou ocultar a janela do navegador a qualquer momento via Win32 ShowWindow.
+Permite alternar entre as abas 'Para você' (Home) e 'Seguindo' (Following),
+além de exibir ou ocultar a janela do navegador via Win32 ShowWindow.
 """
 
 import ctypes
@@ -73,7 +74,7 @@ class XBrowserManager:
         self._logged_in = False
         self._posts_received_count = 0
 
-        self.on_posts_callback: Optional[Callable[[list[Post]], None]] = None
+        self.on_posts_callback: Optional[Callable[[str, list[Post]], None]] = None
         self.on_status_callback: Optional[Callable[[str], None]] = None
 
     def _set_status(self, text: str):
@@ -84,7 +85,7 @@ class XBrowserManager:
             except Exception as e:
                 logger.error(f"Erro no callback de status: {e}")
 
-    def start(self, on_posts: Callable[[list[Post]], None], on_status: Optional[Callable[[str], None]] = None, start_visible: bool = False):
+    def start(self, on_posts: Callable[[str, list[Post]], None], on_status: Optional[Callable[[str], None]] = None, start_visible: bool = False):
         """Inicia a thread do navegador."""
         self.on_posts_callback = on_posts
         self.on_status_callback = on_status
@@ -123,9 +124,13 @@ class XBrowserManager:
     def is_browser_visible(self) -> bool:
         return self._is_visible
 
-    def reload_timeline(self):
+    def switch_feed_tab(self, feed: str):
+        """Alterna a aba de conteúdo no site do X ('home' ou 'following')."""
+        self._cmd_queue.put(("switch_tab", feed))
+
+    def reload_timeline(self, feed: Optional[str] = None):
         """Comanda a página do X a recarregar a timeline."""
-        self._cmd_queue.put(("reload", None))
+        self._cmd_queue.put(("reload", feed))
 
     def scroll_down(self):
         """Comanda a página a rolar para baixo para carregar mais publicações."""
@@ -155,9 +160,11 @@ class XBrowserManager:
                         posts = parse_x_graphql_response(payload)
                         if posts:
                             self._posts_received_count += len(posts)
-                            logger.info(f"Interceptadas {len(posts)} publicações de {url}")
+                            # Identifica o feed de origem
+                            feed_type = "following" if "HomeLatestTimeline" in url else "home"
+                            logger.info(f"Interceptadas {len(posts)} publicações para o feed '{feed_type}' de {url}")
                             if self.on_posts_callback:
-                                self.on_posts_callback(posts)
+                                self.on_posts_callback(feed_type, posts)
             except Exception as e:
                 logger.debug(f"Aviso ao processar resposta da rede: {e}")
 
@@ -182,7 +189,7 @@ class XBrowserManager:
                 # Iniciamos com navegador real Chromium mantendo o perfil persistente
                 context: BrowserContext = pw.chromium.launch_persistent_context(
                     user_data_dir=self.data_dir,
-                    headless=False,  # Headed para permitir login, 2FA e visibilidade sob demanda
+                    headless=False,
                     viewport={"width": 1280, "height": 800},
                     args=[
                         "--disable-blink-features=AutomationControlled",
@@ -202,7 +209,6 @@ class XBrowserManager:
 
                 if already_authenticated:
                     self._set_status("Sessão autenticada detectada. Acessando timeline...")
-                    # Oculta o navegador já que o usuário já está logado
                     time.sleep(0.5)
                     self._apply_window_visibility(False)
                     self._is_visible = False
@@ -216,7 +222,6 @@ class XBrowserManager:
                     logger.warning(f"Aviso no carregamento inicial: {e}")
 
                 if self._logged_in:
-                    # Aplica ocultação após o carregamento inicial
                     self._apply_window_visibility(False)
                     self._is_visible = False
 
@@ -224,14 +229,33 @@ class XBrowserManager:
 
                 # Loop de comandos e manutenção
                 while self._running:
-                    # Processa comandos da fila
                     try:
                         cmd, arg = self._cmd_queue.get(timeout=0.2)
                         if cmd == "stop":
                             break
                         elif cmd == "set_visibility":
                             self._apply_window_visibility(arg)
+                        elif cmd == "switch_tab":
+                            feed_name = arg
+                            self._set_status(f"Alternando para guia {'Seguindo' if feed_name == 'following' else 'Para você'}...")
+                            try:
+                                tabs = page.query_selector_all("[role='tab']")
+                                if len(tabs) >= 2:
+                                    target_idx = 1 if feed_name == "following" else 0
+                                    tabs[target_idx].click()
+                                    self._set_status(f"Guia {'Seguindo' if feed_name == 'following' else 'Para você'} carregada.")
+                            except Exception as e:
+                                logger.warning(f"Erro ao alternar aba no X: {e}")
                         elif cmd == "reload":
+                            feed_name = arg
+                            if feed_name:
+                                try:
+                                    tabs = page.query_selector_all("[role='tab']")
+                                    if len(tabs) >= 2:
+                                        target_idx = 1 if feed_name == "following" else 0
+                                        tabs[target_idx].click()
+                                except Exception:
+                                    pass
                             self._set_status("Atualizando página do X...")
                             try:
                                 page.reload(wait_until="domcontentloaded", timeout=30000)
@@ -255,17 +279,14 @@ class XBrowserManager:
                         if is_auth and not self._logged_in:
                             self._logged_in = True
                             self._set_status("Login detectado com sucesso! Carregando timeline...")
-                            # Oculta a janela do navegador automaticamente
                             self._apply_window_visibility(False)
                             self._is_visible = False
-                            # Se ainda não recebeu postagens, recarrega a home para disparar o HomeTimeline
                             if self._posts_received_count == 0:
                                 try:
                                     page.goto("https://x.com/home", wait_until="domcontentloaded", timeout=30000)
                                 except Exception as e:
                                     logger.warning(f"Erro ao navegar para home após login: {e}")
 
-                    # Mantém o loop responsivo
                     time.sleep(0.05)
 
                 context.close()

@@ -15,8 +15,11 @@ class BaseTimelineReader(ABC):
     Não executa ações de escrita ou interação.
     """
     @abstractmethod
-    def start(self, on_posts_received: Callable[[List[Post]], None], on_status_change: Optional[Callable[[str], None]] = None):
-        """Inicia a observação da timeline."""
+    def start(self, on_posts_received: Callable[[str, List[Post]], None], on_status_change: Optional[Callable[[str], None]] = None):
+        """
+        Inicia a observação da timeline.
+        on_posts_received recebe (feed_type: str, posts: List[Post]).
+        """
         pass
 
     @abstractmethod
@@ -25,8 +28,13 @@ class BaseTimelineReader(ABC):
         pass
 
     @abstractmethod
-    def refresh(self):
+    def refresh(self, feed: Optional[str] = None):
         """Solicita uma atualização manual da timeline."""
+        pass
+
+    @abstractmethod
+    def switch_feed_tab(self, feed: str):
+        """Alterna a guia ativa no navegador ('home' ou 'following')."""
         pass
 
 

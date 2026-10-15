@@ -71,12 +71,14 @@ python run.py
 
 | Tecla / Atalho | Ação |
 | :--- | :--- |
-| **Seta para Baixo** | Move o foco para a próxima publicação na lista |
-| **Seta para Cima** | Move o foco para a publicação anterior na lista |
+| **Ctrl + Win + Seta Direita / Esquerda** | Alterna entre as guias **Para você** e **Seguindo** |
+| **Shift + Tab / Tab** | Move o foco entre a lista de publicações e o seletor de guias |
+| **Seta para Baixo** | Move o foco para a próxima publicação na lista ativa |
+| **Seta para Cima** | Move o foco para a publicação anterior na lista ativa |
 | **Enter** | Abre o diálogo com os detalhes completos da publicação selecionada |
 | **Escape** | Fecha o diálogo de detalhes e retorna à lista de publicações |
-| **F5** | Solicita a atualização da timeline |
-| **Ctrl + M** | Carrega mais postagens (rola o navegador) |
+| **F5** | Solicita a atualização da guia ativa no momento |
+| **Ctrl + M** | Carrega mais postagens na guia ativa (rola o navegador) |
 | **F11** | Exibe ou oculta a janela do Chromium (útil para login ou verificação) |
 | **Alt + F4** | Encerra o aplicativo e o processo do navegador |
 
