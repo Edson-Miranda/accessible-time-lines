@@ -2,11 +2,9 @@
 Gerenciador do ciclo de vida do navegador Chromium para o X.
 Utiliza perfil de dados persistente (mantendo cookies e sessão).
 Executa em thread dedicada em segundo plano com fila de comandos sem bloquear a interface gráfica.
-Permite alternar entre as abas 'Para você' (Home) e 'Seguindo' (Following),
-além de exibir ou ocultar a janela do navegador via Win32 ShowWindow.
+Controla a visibilidade via CDP (Chrome DevTools Protocol) e alternância de abas via JavaScript.
 """
 
-import ctypes
 import json
 import logging
 import os
@@ -15,52 +13,16 @@ import queue
 import threading
 import time
 from typing import Callable, Optional
-from playwright.sync_api import sync_playwright, BrowserContext, Page, Response
+from playwright.sync_api import sync_playwright, BrowserContext, Page, Response, CDPSession
 from src.platforms.x_twitter.parser import parse_x_graphql_response
 from src.core.models import Post
 
 logger = logging.getLogger("AccessibleTimeline.Browser")
 
-# Constantes Win32 para ShowWindow
-SW_HIDE = 0
-SW_NORMAL = 1
-SW_SHOW = 5
-SW_MINIMIZE = 6
-SW_RESTORE = 9
-
-
-def _find_browser_windows() -> list[int]:
-    """Localiza as janelas pertencentes ao Chromium do Accessible Timeline."""
-    hwnds = []
-
-    def enum_windows_callback(hwnd, extra):
-        cls = ctypes.create_unicode_buffer(256)
-        ctypes.windll.user32.GetClassNameW(hwnd, cls, 256)
-        if cls.value == "Chrome_WidgetWin_1":
-            parent = ctypes.windll.user32.GetParent(hwnd)
-            if parent == 0:
-                length = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
-                buff = ctypes.create_unicode_buffer(length + 1)
-                ctypes.windll.user32.GetWindowTextW(hwnd, buff, length + 1)
-                title = buff.value
-                # Filtra janelas do X/Twitter ou Chromium
-                if any(k in title for k in ["X", "Twitter", "Chromium", "Chrome"]):
-                    hwnds.append(hwnd)
-        return True
-
-    try:
-        EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_int, ctypes.c_int)
-        ctypes.windll.user32.EnumWindows(EnumWindowsProc(enum_windows_callback), 0)
-    except Exception as e:
-        logger.warning(f"Erro ao enumerar janelas: {e}")
-
-    return hwnds
-
 
 class XBrowserManager:
     def __init__(self, data_dir: Optional[str] = None):
         if data_dir is None:
-            # Salva no diretório de dados da aplicação
             base_dir = Path(os.environ.get("APPDATA", ".")) / "AccessibleTimeline"
             data_dir = str(base_dir / "x_profile")
 
@@ -73,6 +35,7 @@ class XBrowserManager:
         self._is_visible = False
         self._logged_in = False
         self._posts_received_count = 0
+        self._cdp: Optional[CDPSession] = None
 
         self.on_posts_callback: Optional[Callable[[str, list[Post]], None]] = None
         self.on_status_callback: Optional[Callable[[str], None]] = None
@@ -105,12 +68,12 @@ class XBrowserManager:
             self._thread.join(timeout=5)
 
     def show_browser(self):
-        """Torna a janela do navegador visível."""
+        """Restaura a janela do navegador na tela."""
         self._is_visible = True
         self._cmd_queue.put(("set_visibility", True))
 
     def hide_browser(self):
-        """Oculta a janela do navegador da área de trabalho."""
+        """Minimiza/oculta a janela do navegador da área de trabalho."""
         self._is_visible = False
         self._cmd_queue.put(("set_visibility", False))
 
@@ -136,20 +99,55 @@ class XBrowserManager:
         """Comanda a página a rolar para baixo para carregar mais publicações."""
         self._cmd_queue.put(("scroll_down", None))
 
-    def _apply_window_visibility(self, visible: bool):
-        """Aplica visibilidade usando Win32 ShowWindow nos HWNDs do navegador."""
-        hwnds = _find_browser_windows()
-        for hwnd in hwnds:
-            if visible:
-                ctypes.windll.user32.ShowWindow(hwnd, SW_RESTORE)
-                ctypes.windll.user32.SetForegroundWindow(hwnd)
-            else:
-                ctypes.windll.user32.ShowWindow(hwnd, SW_HIDE)
+    def _apply_cdp_visibility(self, visible: bool):
+        """Aplica visibilidade usando Chrome DevTools Protocol nativo."""
+        if not self._cdp:
+            return
+        try:
+            win = self._cdp.send("Browser.getWindowForTarget")
+            window_id = win.get("windowId")
+            if window_id:
+                state = "normal" if visible else "minimized"
+                self._cdp.send("Browser.setWindowBounds", {
+                    "windowId": window_id,
+                    "bounds": {"windowState": state}
+                })
+                logger.info(f"Visibilidade do navegador ajustada para: {state}")
+        except Exception as e:
+            logger.warning(f"Aviso ao ajustar visibilidade via CDP: {e}")
+
+    def _execute_tab_switch_js(self, page: Page, feed_name: str) -> bool:
+        """Executa clique seguro na aba do X via JavaScript no DOM."""
+        js_code = """
+        (targetFeed) => {
+            const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+            for (const t of tabs) {
+                const text = (t.innerText || t.textContent || '').trim().toLowerCase();
+                if (targetFeed === 'following' && (text.includes('seguindo') || text.includes('following'))) {
+                    t.click();
+                    return true;
+                } else if (targetFeed === 'home' && (text.includes('para você') || text.includes('para voce') || text.includes('for you'))) {
+                    t.click();
+                    return true;
+                }
+            }
+            if (tabs.length >= 2) {
+                const idx = targetFeed === 'following' ? 1 : 0;
+                tabs[idx].click();
+                return true;
+            }
+            return false;
+        }
+        """
+        try:
+            return bool(page.evaluate(js_code, feed_name))
+        except Exception as e:
+            logger.warning(f"Erro ao executar alternância de aba via JS: {e}")
+            return False
 
     def _handle_response(self, response: Response):
         """Intercepta passivamente respostas de rede da API do X."""
         url = response.url
-        # Filtra chamadas GraphQL e endpoints de timeline da API do X
         if "/i/api/graphql/" in url or "/i/api/2/" in url:
             try:
                 content_type = response.headers.get("content-type", "")
@@ -160,7 +158,6 @@ class XBrowserManager:
                         posts = parse_x_graphql_response(payload)
                         if posts:
                             self._posts_received_count += len(posts)
-                            # Identifica o feed de origem
                             feed_type = "following" if "HomeLatestTimeline" in url else "home"
                             logger.info(f"Interceptadas {len(posts)} publicações para o feed '{feed_type}' de {url}")
                             if self.on_posts_callback:
@@ -186,7 +183,6 @@ class XBrowserManager:
 
         with sync_playwright() as pw:
             try:
-                # Iniciamos com navegador real Chromium mantendo o perfil persistente
                 context: BrowserContext = pw.chromium.launch_persistent_context(
                     user_data_dir=self.data_dir,
                     headless=False,
@@ -198,20 +194,22 @@ class XBrowserManager:
                     ],
                 )
 
-                # Escuta passiva de respostas de rede no contexto inteiro
                 context.on("response", self._handle_response)
-
                 page: Page = context.pages[0] if context.pages else context.new_page()
 
-                # Verifica se o usuário já possui sessão autenticada salva
+                # Cria sessão CDP nativa para controle de janelas sem dependência de Win32
+                try:
+                    self._cdp = context.new_cdp_session(page)
+                except Exception as e:
+                    logger.warning(f"Não foi possível iniciar CDP session: {e}")
+
                 already_authenticated = self._check_auth_status(context)
                 self._logged_in = already_authenticated
 
                 if already_authenticated:
                     self._set_status("Sessão autenticada detectada. Acessando timeline...")
-                    time.sleep(0.5)
-                    self._apply_window_visibility(False)
                     self._is_visible = False
+                    self._apply_cdp_visibility(False)
                 else:
                     self._set_status("Aguardando login no navegador. Pressione F11 se precisar exibir a janela.")
                     self._is_visible = True
@@ -222,8 +220,18 @@ class XBrowserManager:
                     logger.warning(f"Aviso no carregamento inicial: {e}")
 
                 if self._logged_in:
-                    self._apply_window_visibility(False)
+                    self._apply_cdp_visibility(False)
                     self._is_visible = False
+
+                # Aguarda carregamento inicial e pré-carrega a outra aba se necessário
+                time.sleep(2.0)
+                if self._logged_in:
+                    # Alterna suavemente para pré-carregar ambos os feeds (Home e Following)
+                    logger.info("Pré-carregando abas do X...")
+                    self._execute_tab_switch_js(page, "following")
+                    time.sleep(2.0)
+                    self._execute_tab_switch_js(page, "home")
+                    self._apply_cdp_visibility(False)
 
                 last_auth_check = time.time()
 
@@ -234,28 +242,19 @@ class XBrowserManager:
                         if cmd == "stop":
                             break
                         elif cmd == "set_visibility":
-                            self._apply_window_visibility(arg)
+                            self._apply_cdp_visibility(arg)
                         elif cmd == "switch_tab":
                             feed_name = arg
                             self._set_status(f"Alternando para guia {'Seguindo' if feed_name == 'following' else 'Para você'}...")
-                            try:
-                                tabs = page.query_selector_all("[role='tab']")
-                                if len(tabs) >= 2:
-                                    target_idx = 1 if feed_name == "following" else 0
-                                    tabs[target_idx].click()
-                                    self._set_status(f"Guia {'Seguindo' if feed_name == 'following' else 'Para você'} carregada.")
-                            except Exception as e:
-                                logger.warning(f"Erro ao alternar aba no X: {e}")
+                            success = self._execute_tab_switch_js(page, feed_name)
+                            if success:
+                                self._set_status(f"Guia {'Seguindo' if feed_name == 'following' else 'Para você'} selecionada no navegador.")
+                            else:
+                                self._set_status(f"Guia alternada na interface.")
                         elif cmd == "reload":
                             feed_name = arg
                             if feed_name:
-                                try:
-                                    tabs = page.query_selector_all("[role='tab']")
-                                    if len(tabs) >= 2:
-                                        target_idx = 1 if feed_name == "following" else 0
-                                        tabs[target_idx].click()
-                                except Exception:
-                                    pass
+                                self._execute_tab_switch_js(page, feed_name)
                             self._set_status("Atualizando página do X...")
                             try:
                                 page.reload(wait_until="domcontentloaded", timeout=30000)
@@ -271,7 +270,7 @@ class XBrowserManager:
                     except queue.Empty:
                         pass
 
-                    # Checagem periódica de login (a cada 2 segundos)
+                    # Checagem periódica de login
                     now = time.time()
                     if now - last_auth_check > 2.0:
                         last_auth_check = now
@@ -279,7 +278,7 @@ class XBrowserManager:
                         if is_auth and not self._logged_in:
                             self._logged_in = True
                             self._set_status("Login detectado com sucesso! Carregando timeline...")
-                            self._apply_window_visibility(False)
+                            self._apply_cdp_visibility(False)
                             self._is_visible = False
                             if self._posts_received_count == 0:
                                 try:

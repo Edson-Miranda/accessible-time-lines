@@ -174,12 +174,6 @@ class MainWindow(wx.Frame):
         if target != current:
             self.notebook.SetSelection(target)
             target_list = self.following_list if target == 1 else self.for_you_list
-            target_feed = "following" if target == 1 else "home"
-            target_name = "Seguindo" if target == 1 else "Para você"
-            store = self.following_store if target == 1 else self.for_you_store
-
-            self.reader.switch_feed_tab(target_feed)
-            self.status_bar.SetStatusText(f"Guia {target_name}: {store.count()} publicações.")
             wx.CallAfter(target_list.SetFocus)
 
     def _on_notebook_page_changed(self, event: wx.BookCtrlEvent):

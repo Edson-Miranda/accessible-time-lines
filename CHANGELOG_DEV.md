@@ -4,6 +4,22 @@ Este documento registra todas as alterações técnicas, refatorações e adiç�
 
 ---
 
+## [0.1.0-dev.4] - 2026-10-14
+
+### Corrigido
+- **Ocultação e Visibilidade do Navegador via CDP**:
+  - Migração do controle de visibilidade da janela do Chromium para o Chrome DevTools Protocol (`Browser.setWindowBounds` com `windowState: "minimized"` e `"normal"`).
+  - Eliminação definitiva de falhas causadas por tipos de 32-bit em enumerações Win32 x64 e títulos variáveis da página. O navegador agora minimiza/oculta imediatamente na inicialização.
+- **Alternância de Guias no Navegador ('Para você' e 'Seguindo')**:
+  - Implementação de injeção de script JavaScript direto no DOM para alternância de abas, localizando os elementos pelos rótulos textuais ("Para você" / "For you" e "Seguindo" / "Following").
+  - Elimina bloqueios causados por rolagem da página ou verificações de estabilidade visual do Playwright, garantindo que o clique na aba do site original seja sempre executado.
+- **Pré-carregamento dos Dois Feeds na Inicialização**:
+  - O navegador agora percorre as abas na inicialização para disparar as requisições `HomeTimeline` e `HomeLatestTimeline`, garantindo que ambas as guias tenham postagens carregadas desde o primeiro momento.
+- **Prevenção de Chamadas Duplicadas**:
+  - Refatoração de `MainWindow._toggle_tab` para delegar a notificação ao manipulador de eventos de página, evitando requisições duplicadas em sequência.
+
+---
+
 ## [0.1.0-dev.3] - 2026-10-14
 
 ### Adicionado
