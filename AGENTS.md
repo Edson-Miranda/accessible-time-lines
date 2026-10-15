@@ -124,10 +124,10 @@ O projeto adota uma separação rigorosa entre **versões internas de desenvolvi
 - **Changelog de Desenvolvimento (`CHANGELOG_DEV.md`)**:
   - Documenta alterações técnicas detalhadas, refatorações, adições de módulos e testes.
   - Atualizado a cada avanço técnico ou versão interna.
-- **Changelog Público (`CHANGELOG.md`)**:
-  - Voltado aos usuários finais, em linguagem clara, objetiva e amigável para leitores de tela.
-  - **REGRA PERMANENTE**: O arquivo `CHANGELOG.md` **NUNCA** deve ser atualizado automaticamente em tarefas cotidianas.
-  - **Gatilho de Atualização**: O `CHANGELOG.md` só será atualizado quando o usuário der a ordem explícita:
+- **Changelog Público (`CHANGELOG.txt`)**:
+  - Voltado aos usuários finais, em formato de texto simples (.txt), com escrita calorosa, clara e amigável para leitores de tela.
+  - **REGRA PERMANENTE**: O arquivo `CHANGELOG.txt` **NUNCA** deve ser atualizado automaticamente em tarefas cotidianas.
+  - **Gatilho de Atualização**: O `CHANGELOG.txt` só será atualizado quando o usuário der a ordem explícita:
     > *"gere um changelog da versão interna X até a Y com a versão tal"*
   - Nesse momento, e apenas nesse momento, o agente irá consolidar as alterações das versões internas `X` até `Y` sob a versão pública designada pelo usuário.
 
