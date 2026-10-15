@@ -15,10 +15,16 @@ class BaseTimelineReader(ABC):
     Não executa ações de escrita ou interação.
     """
     @abstractmethod
-    def start(self, on_posts_received: Callable[[str, List[Post]], None], on_status_change: Optional[Callable[[str], None]] = None):
+    def start(
+        self,
+        on_posts_received: Callable[[str, List[Post]], None],
+        on_status_change: Optional[Callable[[str], None]] = None,
+        on_account_info: Optional[Callable[[str], None]] = None
+    ):
         """
         Inicia a observação da timeline.
         on_posts_received recebe (feed_type: str, posts: List[Post]).
+        on_account_info recebe o nome/identificador da conta conectada.
         """
         pass
 
@@ -34,7 +40,12 @@ class BaseTimelineReader(ABC):
 
     @abstractmethod
     def switch_feed_tab(self, feed: str):
-        """Alterna a guia ativa no navegador ('home' ou 'following')."""
+        """Alterna a guia/fluxo ativo no navegador ('for_you', 'following', etc.)."""
+        pass
+
+    @abstractmethod
+    def navigate_to(self, url: str):
+        """Navega para uma URL específica da plataforma."""
         pass
 
 

@@ -2,7 +2,7 @@
 Gerenciador do ciclo de vida do navegador Chromium para o X.
 Utiliza perfil de dados persistente (mantendo cookies e sessão).
 Executa em thread dedicada em segundo plano com fila de comandos sem bloquear a interface gráfica.
-Controla a visibilidade via CDP (Chrome DevTools Protocol) e alternância de abas via JavaScript.
+Controla a visibilidade via CDP e gerencia os fluxos de Para você, Seguindo, Notificações e DMs.
 """
 
 import json
@@ -36,9 +36,11 @@ class XBrowserManager:
         self._logged_in = False
         self._posts_received_count = 0
         self._cdp: Optional[CDPSession] = None
+        self._account_name: Optional[str] = None
 
         self.on_posts_callback: Optional[Callable[[str, list[Post]], None]] = None
         self.on_status_callback: Optional[Callable[[str], None]] = None
+        self.on_account_info_callback: Optional[Callable[[str], None]] = None
 
     def _set_status(self, text: str):
         logger.info(f"Status: {text}")
@@ -48,10 +50,17 @@ class XBrowserManager:
             except Exception as e:
                 logger.error(f"Erro no callback de status: {e}")
 
-    def start(self, on_posts: Callable[[str, list[Post]], None], on_status: Optional[Callable[[str], None]] = None, start_visible: bool = False):
+    def start(
+        self,
+        on_posts: Callable[[str, list[Post]], None],
+        on_status: Optional[Callable[[str], None]] = None,
+        on_account_info: Optional[Callable[[str], None]] = None,
+        start_visible: bool = False
+    ):
         """Inicia a thread do navegador."""
         self.on_posts_callback = on_posts
         self.on_status_callback = on_status
+        self.on_account_info_callback = on_account_info
         self._is_visible = start_visible
         self._running = True
 
@@ -88,8 +97,12 @@ class XBrowserManager:
         return self._is_visible
 
     def switch_feed_tab(self, feed: str):
-        """Alterna a aba de conteúdo no site do X ('home' ou 'following')."""
+        """Alterna a aba de conteúdo no site do X ('for_you', 'following', 'mentions', 'dms')."""
         self._cmd_queue.put(("switch_tab", feed))
+
+    def navigate_to(self, url: str):
+        """Navega para uma URL específica."""
+        self._cmd_queue.put(("navigate", url))
 
     def reload_timeline(self, feed: Optional[str] = None):
         """Comanda a página do X a recarregar a timeline."""
@@ -116,8 +129,57 @@ class XBrowserManager:
         except Exception as e:
             logger.warning(f"Aviso ao ajustar visibilidade via CDP: {e}")
 
+    def _detect_account_info(self, page: Page):
+        """Tenta extrair o nome e usuário da conta conectada."""
+        js_code = """
+        () => {
+            const btn = document.querySelector('[data-testid="SideNav_AccountSwitcher_Button"]');
+            if (btn) {
+                const lines = (btn.innerText || '').split('\\n').map(s => s.trim()).filter(Boolean);
+                if (lines.length >= 2) {
+                    return lines[0] + ' (' + lines[1] + ')';
+                } else if (lines.length === 1) {
+                    return lines[0];
+                }
+            }
+            return null;
+        }
+        """
+        try:
+            acc = page.evaluate(js_code)
+            if acc and acc != self._account_name:
+                self._account_name = acc
+                logger.info(f"Conta conectada detectada: {acc}")
+                if self.on_account_info_callback:
+                    self.on_account_info_callback(acc)
+        except Exception:
+            pass
+
     def _execute_tab_switch_js(self, page: Page, feed_name: str) -> bool:
         """Executa clique seguro na aba do X via JavaScript no DOM."""
+        if feed_name in ("mentions", "notifications"):
+            try:
+                page.goto("https://x.com/notifications", wait_until="domcontentloaded", timeout=25000)
+                return True
+            except Exception as e:
+                logger.warning(f"Erro ao navegar para notificações: {e}")
+                return False
+        elif feed_name in ("dms", "messages"):
+            try:
+                page.goto("https://x.com/messages", wait_until="domcontentloaded", timeout=25000)
+                return True
+            except Exception as e:
+                logger.warning(f"Erro ao navegar para mensagens: {e}")
+                return False
+
+        # Se não estiver em /home, navega para /home primeiro
+        if "/home" not in page.url:
+            try:
+                page.goto("https://x.com/home", wait_until="domcontentloaded", timeout=25000)
+                time.sleep(1.0)
+            except Exception:
+                pass
+
         js_code = """
         (targetFeed) => {
             const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
@@ -126,7 +188,7 @@ class XBrowserManager:
                 if (targetFeed === 'following' && (text.includes('seguindo') || text.includes('following'))) {
                     t.click();
                     return true;
-                } else if (targetFeed === 'home' && (text.includes('para você') || text.includes('para voce') || text.includes('for you'))) {
+                } else if ((targetFeed === 'for_you' || targetFeed === 'home') && (text.includes('para você') || text.includes('para voce') || text.includes('for you'))) {
                     t.click();
                     return true;
                 }
@@ -142,11 +204,11 @@ class XBrowserManager:
         try:
             return bool(page.evaluate(js_code, feed_name))
         except Exception as e:
-            logger.warning(f"Erro ao executar alternância de aba via JS: {e}")
+            logger.warning(f"Erro ao alternar aba via JS: {e}")
             return False
 
     def _handle_response(self, response: Response):
-        """Intercepta passivamente respostas de rede da API do X."""
+        """Intercepta passivamente respostas de rede da API do X e roteia para o feed correto."""
         url = response.url
         if "/i/api/graphql/" in url or "/i/api/2/" in url:
             try:
@@ -158,12 +220,22 @@ class XBrowserManager:
                         posts = parse_x_graphql_response(payload)
                         if posts:
                             self._posts_received_count += len(posts)
-                            feed_type = "following" if "HomeLatestTimeline" in url else "home"
-                            logger.info(f"Interceptadas {len(posts)} publicações para o feed '{feed_type}' de {url}")
+
+                            # Identifica o fluxo de destino
+                            if "HomeLatestTimeline" in url:
+                                feed_type = "following"
+                            elif "Notifications" in url or "notifications" in url:
+                                feed_type = "mentions"
+                            elif "dm" in url or "messages" in url:
+                                feed_type = "dms"
+                            else:
+                                feed_type = "for_you"
+
+                            logger.info(f"Interceptadas {len(posts)} publicações para o fluxo '{feed_type}' de {url}")
                             if self.on_posts_callback:
                                 self.on_posts_callback(feed_type, posts)
             except Exception as e:
-                logger.debug(f"Aviso ao processar resposta da rede: {e}")
+                logger.debug(f"Aviso ao processar resposta: {e}")
 
     def _check_auth_status(self, context: BrowserContext) -> bool:
         """Verifica se os cookies essenciais de autenticação do X estão presentes."""
@@ -197,7 +269,6 @@ class XBrowserManager:
                 context.on("response", self._handle_response)
                 page: Page = context.pages[0] if context.pages else context.new_page()
 
-                # Cria sessão CDP nativa para controle de janelas sem dependência de Win32
                 try:
                     self._cdp = context.new_cdp_session(page)
                 except Exception as e:
@@ -223,14 +294,13 @@ class XBrowserManager:
                     self._apply_cdp_visibility(False)
                     self._is_visible = False
 
-                # Aguarda carregamento inicial e pré-carrega a outra aba se necessário
                 time.sleep(2.0)
                 if self._logged_in:
-                    # Alterna suavemente para pré-carregar ambos os feeds (Home e Following)
-                    logger.info("Pré-carregando abas do X...")
+                    self._detect_account_info(page)
+                    # Pré-carrega Seguindo e retorna a Para você
                     self._execute_tab_switch_js(page, "following")
                     time.sleep(2.0)
-                    self._execute_tab_switch_js(page, "home")
+                    self._execute_tab_switch_js(page, "for_you")
                     self._apply_cdp_visibility(False)
 
                 last_auth_check = time.time()
@@ -245,12 +315,23 @@ class XBrowserManager:
                             self._apply_cdp_visibility(arg)
                         elif cmd == "switch_tab":
                             feed_name = arg
-                            self._set_status(f"Alternando para guia {'Seguindo' if feed_name == 'following' else 'Para você'}...")
-                            success = self._execute_tab_switch_js(page, feed_name)
-                            if success:
-                                self._set_status(f"Guia {'Seguindo' if feed_name == 'following' else 'Para você'} selecionada no navegador.")
-                            else:
-                                self._set_status(f"Guia alternada na interface.")
+                            label_map = {
+                                "for_you": "Para você",
+                                "following": "Seguindo",
+                                "mentions": "Menções",
+                                "dms": "Mensagens diretas"
+                            }
+                            display_name = label_map.get(feed_name, feed_name)
+                            self._set_status(f"Acessando {display_name}...")
+                            self._execute_tab_switch_js(page, feed_name)
+                            self._detect_account_info(page)
+                        elif cmd == "navigate":
+                            url = arg
+                            self._set_status(f"Navegando...")
+                            try:
+                                page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                            except Exception as e:
+                                logger.warning(f"Erro ao navegar: {e}")
                         elif cmd == "reload":
                             feed_name = arg
                             if feed_name:
@@ -270,16 +351,16 @@ class XBrowserManager:
                     except queue.Empty:
                         pass
 
-                    # Checagem periódica de login
                     now = time.time()
                     if now - last_auth_check > 2.0:
                         last_auth_check = now
                         is_auth = self._check_auth_status(context)
                         if is_auth and not self._logged_in:
                             self._logged_in = True
-                            self._set_status("Login detectado com sucesso! Carregando timeline...")
+                            self._set_status("Login detectado com sucesso! Carregando timelines...")
                             self._apply_cdp_visibility(False)
                             self._is_visible = False
+                            self._detect_account_info(page)
                             if self._posts_received_count == 0:
                                 try:
                                     page.goto("https://x.com/home", wait_until="domcontentloaded", timeout=30000)

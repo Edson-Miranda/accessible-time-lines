@@ -4,6 +4,29 @@ Este documento registra todas as alterações técnicas, refatorações e adiç�
 
 ---
 
+## [0.1.0-dev.5] - 2026-10-15
+
+### Adicionado
+- **Layout Clássico em Árvore (`wx.TreeCtrl` / `SysTreeView32`)**:
+  - Transição do modelo de guias para o layout de árvore clássico do TWBlue e The Qube.
+  - Painel esquerdo com Árvore nativa acessível contendo o nó da conta (com expansão/recolhimento) e seus respectivos fluxos como nós filhos:
+    - **Para você** (feed algorítmico)
+    - **Seguindo** (timeline cronológica)
+    - **Menções (Notificações)**
+    - **Mensagens diretas**
+  - Painel direito com Lista nativa (`wx.ListCtrl`) exibindo as publicações do fluxo ativo.
+- **Navegação Bidirecional por Teclado**:
+  - `Tab` (na árvore): Move o foco diretamente para a lista de postagens do fluxo ativo.
+  - `Shift + Tab` (na lista): Retorna o foco diretamente para o item selecionado na árvore.
+  - Setas Direita/Esquerda (na árvore): Expande ou recolhe o nó da conta.
+  - Atalhos globais na janela: `Control + Windows + Setas Cima/Baixo/Esquerda/Direita` e `Ctrl + Tab` para ciclar entre os fluxos da árvore de qualquer lugar.
+- **Detecção de Nome da Conta**:
+  - O navegador agora detecta o nome de exibição e @handle da conta conectada via DOM do X e atualiza dinamicamente o nó raiz da árvore (ex.: *"Nome (@usuario)"*).
+- **Roteamento de Múltiplos Fluxos**:
+  - Armazenamento desacoplado em `TimelineStore` dedicados para cada fluxo (`for_you`, `following`, `mentions`, `dms`).
+
+---
+
 ## [0.1.0-dev.4] - 2026-10-14
 
 ### Corrigido

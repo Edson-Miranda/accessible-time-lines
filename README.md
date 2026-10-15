@@ -71,14 +71,15 @@ python run.py
 
 | Tecla / Atalho | Ação |
 | :--- | :--- |
-| **Ctrl + Win + Seta Direita / Esquerda** | Alterna entre as guias **Para você** e **Seguindo** |
-| **Shift + Tab / Tab** | Move o foco entre a lista de publicações e o seletor de guias |
-| **Seta para Baixo** | Move o foco para a próxima publicação na lista ativa |
-| **Seta para Cima** | Move o foco para a publicação anterior na lista ativa |
-| **Enter** | Abre o diálogo com os detalhes completos da publicação selecionada |
+| **Tab / Shift + Tab** | Alterna o foco entre a **Árvore de fluxos** (esquerda) e a **Lista de postagens** (direita) |
+| **Setas Direita / Esquerda** | Na Árvore, expande ou recolhe o nó da conta |
+| **Setas Cima / Baixo (na Árvore)** | Navega entre os fluxos: Para você, Seguindo, Menções (Notificações) e Mensagens diretas |
+| **Ctrl + Win + Setas Cima / Baixo** | Alterna rapidamente entre os fluxos da Árvore de qualquer lugar |
+| **Setas Cima / Baixo (na Lista)** | Navega entre as publicações do fluxo ativo |
+| **Enter (na Lista)** | Abre o diálogo com os detalhes completos da publicação selecionada |
 | **Escape** | Fecha o diálogo de detalhes e retorna à lista de publicações |
-| **F5** | Solicita a atualização da guia ativa no momento |
-| **Ctrl + M** | Carrega mais postagens na guia ativa (rola o navegador) |
+| **F5** | Solicita a atualização do fluxo ativo no momento |
+| **Ctrl + M** | Carrega mais postagens no fluxo ativo (rola o navegador) |
 | **F11** | Exibe ou oculta a janela do Chromium (útil para login ou verificação) |
 | **Alt + F4** | Encerra o aplicativo e o processo do navegador |
 

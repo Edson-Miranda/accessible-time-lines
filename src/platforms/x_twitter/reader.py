@@ -17,11 +17,17 @@ class XTimelineReader(BaseTimelineReader):
     def __init__(self, browser_manager: Optional[XBrowserManager] = None):
         self.browser_manager = browser_manager or XBrowserManager()
 
-    def start(self, on_posts_received: Callable[[str, List[Post]], None], on_status_change: Optional[Callable[[str], None]] = None):
+    def start(
+        self,
+        on_posts_received: Callable[[str, List[Post]], None],
+        on_status_change: Optional[Callable[[str], None]] = None,
+        on_account_info: Optional[Callable[[str], None]] = None
+    ):
         """Inicia a captura e monitoramento passivo de publicações."""
         self.browser_manager.start(
             on_posts=on_posts_received,
             on_status=on_status_change,
+            on_account_info=on_account_info,
             start_visible=False
         )
 
@@ -38,8 +44,12 @@ class XTimelineReader(BaseTimelineReader):
         self.browser_manager.scroll_down()
 
     def switch_feed_tab(self, feed: str):
-        """Comanda o navegador a alternar entre 'home' e 'following'."""
+        """Comanda o navegador a alternar entre fluxos ('for_you', 'following', 'mentions', 'dms')."""
         self.browser_manager.switch_feed_tab(feed)
+
+    def navigate_to(self, url: str):
+        """Comanda o navegador a acessar uma URL específica."""
+        self.browser_manager.navigate_to(url)
 
     def toggle_browser_visibility(self):
         """Alterna a visibilidade da janela do navegador."""
