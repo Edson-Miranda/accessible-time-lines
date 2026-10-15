@@ -4,6 +4,20 @@ Este documento registra todas as alterações técnicas, refatorações e adiç�
 
 ---
 
+## [0.1.0-dev.6] - 2026-10-15
+
+### Modificado
+- **Execução Oculta Permanente do Navegador (Headless)**:
+  - O Chromium agora roda em modo 100% headless (`headless=True`) assim que a sessão é confirmada como autenticada (verificada via leitura segura do banco SQLite de cookies em `Default/Network/Cookies` procurando por `auth_token`).
+  - Nenhuma janela do navegador é criada ou exibida após o login, eliminando janelas visíveis, ícones na barra de tarefas e interferências de foco com leitores de tela.
+  - A janela do navegador só é inicializada visível caso o usuário ainda não esteja autenticado no perfil local, garantindo que o login inicial e 2FA possam ser feitos normalmente.
+- **Remoção Definitiva do Atalho F11 e Menus do Navegador**:
+  - Remoção do atalho `F11` (que no Chromium causava alternância nativa de tela cheia em vez de ocultação).
+  - Remoção de todos os métodos e comandos de alternância de visibilidade do navegador na interface (`MainWindow`), leitor (`XTimelineReader`) e gerenciador (`XBrowserManager`).
+  - Atualização correspondente no `AGENTS.md` e `README.md`.
+
+---
+
 ## [0.1.0-dev.5] - 2026-10-15
 
 ### Adicionado

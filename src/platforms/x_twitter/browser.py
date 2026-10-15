@@ -1,8 +1,8 @@
 """
 Gerenciador do ciclo de vida do navegador Chromium para o X.
 Utiliza perfil de dados persistente (mantendo cookies e sessão).
-Executa em thread dedicada em segundo plano com fila de comandos sem bloquear a interface gráfica.
-Controla a visibilidade via CDP e gerencia os fluxos de Para você, Seguindo, Notificações e DMs.
+Executa em modo 100% headless (sem qualquer janela) quando autenticado,
+garantindo que o navegador nunca apareça na tela nem interfira na navegação.
 """
 
 import json
@@ -10,14 +10,36 @@ import logging
 import os
 from pathlib import Path
 import queue
+import shutil
+import sqlite3
 import threading
 import time
 from typing import Callable, Optional
-from playwright.sync_api import sync_playwright, BrowserContext, Page, Response, CDPSession
+from playwright.sync_api import sync_playwright, BrowserContext, Page, Response
 from src.platforms.x_twitter.parser import parse_x_graphql_response
 from src.core.models import Post
 
 logger = logging.getLogger("AccessibleTimeline.Browser")
+
+
+def is_profile_authenticated(data_dir: str) -> bool:
+    """Verifica diretamente se a sessão já está autenticada no banco de cookies."""
+    cookie_file = Path(data_dir) / "Default" / "Network" / "Cookies"
+    if not cookie_file.exists():
+        return False
+    try:
+        temp_db = Path(data_dir) / "temp_check_auth.db"
+        shutil.copy2(cookie_file, temp_db)
+        conn = sqlite3.connect(temp_db)
+        cur = conn.cursor()
+        cur.execute("SELECT 1 FROM cookies WHERE name = 'auth_token' LIMIT 1")
+        has_auth = cur.fetchone() is not None
+        conn.close()
+        if temp_db.exists():
+            os.remove(temp_db)
+        return has_auth
+    except Exception:
+        return False
 
 
 class XBrowserManager:
@@ -32,10 +54,6 @@ class XBrowserManager:
         self._thread: Optional[threading.Thread] = None
         self._cmd_queue: queue.Queue = queue.Queue()
         self._running = False
-        self._is_visible = False
-        self._logged_in = False
-        self._posts_received_count = 0
-        self._cdp: Optional[CDPSession] = None
         self._account_name: Optional[str] = None
 
         self.on_posts_callback: Optional[Callable[[str, list[Post]], None]] = None
@@ -54,14 +72,12 @@ class XBrowserManager:
         self,
         on_posts: Callable[[str, list[Post]], None],
         on_status: Optional[Callable[[str], None]] = None,
-        on_account_info: Optional[Callable[[str], None]] = None,
-        start_visible: bool = False
+        on_account_info: Optional[Callable[[str], None]] = None
     ):
-        """Inicia a thread do navegador."""
+        """Inicia a thread de trabalho do navegador."""
         self.on_posts_callback = on_posts
         self.on_status_callback = on_status
         self.on_account_info_callback = on_account_info
-        self._is_visible = start_visible
         self._running = True
 
         self._thread = threading.Thread(target=self._worker_loop, name="XBrowserWorker", daemon=True)
@@ -76,28 +92,8 @@ class XBrowserManager:
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=5)
 
-    def show_browser(self):
-        """Restaura a janela do navegador na tela."""
-        self._is_visible = True
-        self._cmd_queue.put(("set_visibility", True))
-
-    def hide_browser(self):
-        """Minimiza/oculta a janela do navegador da área de trabalho."""
-        self._is_visible = False
-        self._cmd_queue.put(("set_visibility", False))
-
-    def toggle_browser_visibility(self):
-        """Alterna a visibilidade da janela do navegador."""
-        if self._is_visible:
-            self.hide_browser()
-        else:
-            self.show_browser()
-
-    def is_browser_visible(self) -> bool:
-        return self._is_visible
-
     def switch_feed_tab(self, feed: str):
-        """Alterna a aba de conteúdo no site do X ('for_you', 'following', 'mentions', 'dms')."""
+        """Alterna o fluxo no site do X ('for_you', 'following', 'mentions', 'dms')."""
         self._cmd_queue.put(("switch_tab", feed))
 
     def navigate_to(self, url: str):
@@ -111,23 +107,6 @@ class XBrowserManager:
     def scroll_down(self):
         """Comanda a página a rolar para baixo para carregar mais publicações."""
         self._cmd_queue.put(("scroll_down", None))
-
-    def _apply_cdp_visibility(self, visible: bool):
-        """Aplica visibilidade usando Chrome DevTools Protocol nativo."""
-        if not self._cdp:
-            return
-        try:
-            win = self._cdp.send("Browser.getWindowForTarget")
-            window_id = win.get("windowId")
-            if window_id:
-                state = "normal" if visible else "minimized"
-                self._cdp.send("Browser.setWindowBounds", {
-                    "windowId": window_id,
-                    "bounds": {"windowState": state}
-                })
-                logger.info(f"Visibilidade do navegador ajustada para: {state}")
-        except Exception as e:
-            logger.warning(f"Aviso ao ajustar visibilidade via CDP: {e}")
 
     def _detect_account_info(self, page: Page):
         """Tenta extrair o nome e usuário da conta conectada."""
@@ -172,7 +151,6 @@ class XBrowserManager:
                 logger.warning(f"Erro ao navegar para mensagens: {e}")
                 return False
 
-        # Se não estiver em /home, navega para /home primeiro
         if "/home" not in page.url:
             try:
                 page.goto("https://x.com/home", wait_until="domcontentloaded", timeout=25000)
@@ -219,9 +197,6 @@ class XBrowserManager:
                         payload = json.loads(body)
                         posts = parse_x_graphql_response(payload)
                         if posts:
-                            self._posts_received_count += len(posts)
-
-                            # Identifica o fluxo de destino
                             if "HomeLatestTimeline" in url:
                                 feed_type = "following"
                             elif "Notifications" in url or "notifications" in url:
@@ -231,148 +206,113 @@ class XBrowserManager:
                             else:
                                 feed_type = "for_you"
 
-                            logger.info(f"Interceptadas {len(posts)} publicações para o fluxo '{feed_type}' de {url}")
+                            logger.info(f"Interceptadas {len(posts)} publicações para o fluxo '{feed_type}'")
                             if self.on_posts_callback:
                                 self.on_posts_callback(feed_type, posts)
             except Exception as e:
                 logger.debug(f"Aviso ao processar resposta: {e}")
 
-    def _check_auth_status(self, context: BrowserContext) -> bool:
-        """Verifica se os cookies essenciais de autenticação do X estão presentes."""
-        try:
-            cookies = context.cookies()
-            for c in cookies:
-                if "x.com" in c.get("domain", "") or "twitter.com" in c.get("domain", ""):
-                    if c.get("name") == "auth_token":
-                        return True
-        except Exception:
-            pass
-        return False
-
     def _worker_loop(self):
         """Loop executado na thread de segundo plano."""
-        self._set_status("Iniciando navegador...")
+        while self._running:
+            is_authenticated = is_profile_authenticated(self.data_dir)
+            # Uma vez autenticado, roda SEMPRE em modo headless puro (sem janela)
+            headless = is_authenticated
 
-        with sync_playwright() as pw:
-            try:
-                context: BrowserContext = pw.chromium.launch_persistent_context(
-                    user_data_dir=self.data_dir,
-                    headless=False,
-                    viewport={"width": 1280, "height": 800},
-                    args=[
-                        "--disable-blink-features=AutomationControlled",
-                        "--no-first-run",
-                        "--no-default-browser-check",
-                    ],
-                )
+            if headless:
+                self._set_status("Iniciando motor de acesso ao X (modo em segundo plano)...")
+            else:
+                self._set_status("Aguardando login no navegador. Por favor, acerte seu login na janela aberta...")
 
-                context.on("response", self._handle_response)
-                page: Page = context.pages[0] if context.pages else context.new_page()
-
+            with sync_playwright() as pw:
                 try:
-                    self._cdp = context.new_cdp_session(page)
-                except Exception as e:
-                    logger.warning(f"Não foi possível iniciar CDP session: {e}")
+                    context: BrowserContext = pw.chromium.launch_persistent_context(
+                        user_data_dir=self.data_dir,
+                        headless=headless,
+                        viewport={"width": 1280, "height": 800},
+                        args=[
+                            "--disable-blink-features=AutomationControlled",
+                            "--no-first-run",
+                            "--no-default-browser-check",
+                        ],
+                    )
 
-                already_authenticated = self._check_auth_status(context)
-                self._logged_in = already_authenticated
+                    context.on("response", self._handle_response)
+                    page: Page = context.pages[0] if context.pages else context.new_page()
 
-                if already_authenticated:
-                    self._set_status("Sessão autenticada detectada. Acessando timeline...")
-                    self._is_visible = False
-                    self._apply_cdp_visibility(False)
-                else:
-                    self._set_status("Aguardando login no navegador. Pressione F11 se precisar exibir a janela.")
-                    self._is_visible = True
-
-                try:
-                    page.goto("https://x.com/home", wait_until="domcontentloaded", timeout=45000)
-                except Exception as e:
-                    logger.warning(f"Aviso no carregamento inicial: {e}")
-
-                if self._logged_in:
-                    self._apply_cdp_visibility(False)
-                    self._is_visible = False
-
-                time.sleep(2.0)
-                if self._logged_in:
-                    self._detect_account_info(page)
-                    # Pré-carrega Seguindo e retorna a Para você
-                    self._execute_tab_switch_js(page, "following")
-                    time.sleep(2.0)
-                    self._execute_tab_switch_js(page, "for_you")
-                    self._apply_cdp_visibility(False)
-
-                last_auth_check = time.time()
-
-                # Loop de comandos e manutenção
-                while self._running:
                     try:
-                        cmd, arg = self._cmd_queue.get(timeout=0.2)
-                        if cmd == "stop":
-                            break
-                        elif cmd == "set_visibility":
-                            self._apply_cdp_visibility(arg)
-                        elif cmd == "switch_tab":
-                            feed_name = arg
-                            label_map = {
-                                "for_you": "Para você",
-                                "following": "Seguindo",
-                                "mentions": "Menções",
-                                "dms": "Mensagens diretas"
-                            }
-                            display_name = label_map.get(feed_name, feed_name)
-                            self._set_status(f"Acessando {display_name}...")
-                            self._execute_tab_switch_js(page, feed_name)
-                            self._detect_account_info(page)
-                        elif cmd == "navigate":
-                            url = arg
-                            self._set_status(f"Navegando...")
-                            try:
-                                page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                            except Exception as e:
-                                logger.warning(f"Erro ao navegar: {e}")
-                        elif cmd == "reload":
-                            feed_name = arg
-                            if feed_name:
+                        page.goto("https://x.com/home", wait_until="domcontentloaded", timeout=45000)
+                    except Exception as e:
+                        logger.warning(f"Aviso no carregamento inicial: {e}")
+
+                    # Se estava com janela aberta para login, monitora até o login ser concluído
+                    if not headless:
+                        logged_in = False
+                        while self._running and not logged_in:
+                            time.sleep(1.5)
+                            cookies = context.cookies()
+                            for c in cookies:
+                                if c.get("name") == "auth_token":
+                                    logged_in = True
+                                    break
+                        if logged_in:
+                            self._set_status("Login concluído com sucesso! Ocultando navegador permanentemente...")
+                            context.close()
+                            # Reinicia o loop agora com headless=True permanente
+                            continue
+
+                    self._set_status("Pronto. Monitorando publicações do X...")
+                    time.sleep(2.0)
+                    self._detect_account_info(page)
+
+                    # Pré-carrega ambos os fluxos principais (Seguindo e Para você)
+                    logger.info("Pré-carregando fluxos na inicialização...")
+                    self._execute_tab_switch_js(page, "following")
+                    time.sleep(2.5)
+                    self._execute_tab_switch_js(page, "for_you")
+                    time.sleep(1.0)
+                    self._detect_account_info(page)
+
+                    # Loop de comandos durante a execução normal
+                    while self._running:
+                        try:
+                            cmd, arg = self._cmd_queue.get(timeout=0.2)
+                            if cmd == "stop":
+                                return
+                            elif cmd == "switch_tab":
+                                feed_name = arg
+                                self._set_status(f"Acessando fluxo {feed_name}...")
                                 self._execute_tab_switch_js(page, feed_name)
-                            self._set_status("Atualizando página do X...")
-                            try:
-                                page.reload(wait_until="domcontentloaded", timeout=30000)
-                                self._set_status("Timeline atualizada.")
-                            except Exception as e:
-                                self._set_status(f"Erro ao atualizar: {e}")
-                        elif cmd == "scroll_down":
-                            self._set_status("Carregando mais postagens...")
-                            try:
-                                page.evaluate("window.scrollBy(0, window.innerHeight * 2);")
-                            except Exception as e:
-                                logger.warning(f"Erro ao rolar: {e}")
-                    except queue.Empty:
-                        pass
-
-                    now = time.time()
-                    if now - last_auth_check > 2.0:
-                        last_auth_check = now
-                        is_auth = self._check_auth_status(context)
-                        if is_auth and not self._logged_in:
-                            self._logged_in = True
-                            self._set_status("Login detectado com sucesso! Carregando timelines...")
-                            self._apply_cdp_visibility(False)
-                            self._is_visible = False
-                            self._detect_account_info(page)
-                            if self._posts_received_count == 0:
+                                self._detect_account_info(page)
+                            elif cmd == "navigate":
+                                url = arg
                                 try:
-                                    page.goto("https://x.com/home", wait_until="domcontentloaded", timeout=30000)
+                                    page.goto(url, wait_until="domcontentloaded", timeout=30000)
                                 except Exception as e:
-                                    logger.warning(f"Erro ao navegar para home após login: {e}")
+                                    logger.warning(f"Erro ao navegar: {e}")
+                            elif cmd == "reload":
+                                feed_name = arg
+                                if feed_name:
+                                    self._execute_tab_switch_js(page, feed_name)
+                                self._set_status("Atualizando página do X...")
+                                try:
+                                    page.reload(wait_until="domcontentloaded", timeout=30000)
+                                    self._set_status("Timeline atualizada.")
+                                except Exception as e:
+                                    self._set_status(f"Erro ao atualizar: {e}")
+                            elif cmd == "scroll_down":
+                                self._set_status("Carregando mais postagens...")
+                                try:
+                                    page.evaluate("window.scrollBy(0, window.innerHeight * 2);")
+                                except Exception as e:
+                                    logger.warning(f"Erro ao rolar: {e}")
+                        except queue.Empty:
+                            pass
 
-                    time.sleep(0.05)
+                        time.sleep(0.05)
 
-                context.close()
-            except Exception as e:
-                logger.error(f"Erro crítico no navegador: {e}")
-                self._set_status(f"Erro no navegador: {e}")
-            finally:
-                self._running = False
-                self._set_status("Navegador finalizado.")
+                    context.close()
+                except Exception as e:
+                    logger.error(f"Erro no motor do navegador: {e}")
+                    self._set_status(f"Erro no navegador: {e}")
+                    time.sleep(2.0)

@@ -27,8 +27,7 @@ class XTimelineReader(BaseTimelineReader):
         self.browser_manager.start(
             on_posts=on_posts_received,
             on_status=on_status_change,
-            on_account_info=on_account_info,
-            start_visible=False
+            on_account_info=on_account_info
         )
 
     def stop(self):
@@ -50,10 +49,3 @@ class XTimelineReader(BaseTimelineReader):
     def navigate_to(self, url: str):
         """Comanda o navegador a acessar uma URL específica."""
         self.browser_manager.navigate_to(url)
-
-    def toggle_browser_visibility(self):
-        """Alterna a visibilidade da janela do navegador."""
-        self.browser_manager.toggle_browser_visibility()
-
-    def is_browser_visible(self) -> bool:
-        return self.browser_manager.is_browser_visible()

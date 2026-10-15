@@ -80,7 +80,6 @@ python run.py
 | **Escape** | Fecha o diálogo de detalhes e retorna à lista de publicações |
 | **F5** | Solicita a atualização do fluxo ativo no momento |
 | **Ctrl + M** | Carrega mais postagens no fluxo ativo (rola o navegador) |
-| **F11** | Exibe ou oculta a janela do Chromium (útil para login ou verificação) |
 | **Alt + F4** | Encerra o aplicativo e o processo do navegador |
 
 ---
@@ -88,14 +87,13 @@ python run.py
 ## Roteiro de Teste com Leitor de Telas (NVDA / JAWS)
 
 1. **Primeiro Acesso e Login**:
-   - Inicie o aplicativo com `python run.py`.
-   - A janela principal do Accessible Timeline será exibida e a janela do Chromium também será aberta na página do X.
-   - Caso não esteja autenticado, use `Alt+Tab` para ir à janela do Chromium e faça o login no X normalmente.
-   - Uma vez logado, a timeline do X carregará os dados.
-   - Pressione `F11` para ocultar o navegador Chromium e retorne ao Accessible Timeline.
-2. **Navegação na Lista**:
-   - Pressione `Seta para Baixo` e `Seta para Cima`.
-   - O NVDA/JAWS deve anunciar imediatamente o nome do autor, arroba, horário relativo, resumo do texto e contadores de curtidas/reposts.
+   - Se você já estiver logado, o navegador executará silenciosamente em segundo plano (modo 100% invisível/headless), sem abrir qualquer janela ou ícone na barra de tarefas.
+   - Caso seja a primeira execução sem login prévio, a janela do Chromium abrirá automaticamente para que você realize o login e o 2FA no X.
+   - Assim que o login for concluído, as timelines serão carregadas e, a partir de então, o navegador permanecerá permanentemente oculto em segundo plano.
+2. **Navegação na Árvore e Lista**:
+   - Pressione `Tab` para alternar entre a Árvore de fluxos (esquerda) e a Lista de publicações (direita).
+   - Na lista, use `Seta para Baixo` e `Seta para Cima`.
+   - O NVDA/JAWS anunciará o autor, arroba, horário relativo, resumo do texto e métricas de cada postagem.
    - O leitor deve informar a posição na lista (ex: "1 de 20").
 3. **Leitura Detalhada**:
    - Pressione `Enter` sobre uma publicação.

@@ -72,11 +72,6 @@ class MainWindow(wx.Frame):
         item_exit = timeline_menu.Append(wx.ID_EXIT, "Sai&r\tAlt+F4", "Fecha o Accessible Timeline")
         menu_bar.Append(timeline_menu, "&Timeline")
 
-        # Menu Navegador
-        browser_menu = wx.Menu()
-        item_toggle_browser = browser_menu.Append(wx.ID_ANY, "Exibir/&Ocultar Janela do Navegador\tF11", "Exibe ou oculta a janela do Chromium para login ou verificações")
-        menu_bar.Append(browser_menu, "&Navegador")
-
         # Menu Ajuda
         help_menu = wx.Menu()
         item_about = help_menu.Append(wx.ID_ABOUT, "&Sobre\tF1", "Informações sobre o aplicativo")
@@ -87,7 +82,6 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_refresh, item_refresh)
         self.Bind(wx.EVT_MENU, self._on_load_more, item_load_more)
         self.Bind(wx.EVT_MENU, self._on_open_details, item_details)
-        self.Bind(wx.EVT_MENU, self._on_toggle_browser, item_toggle_browser)
         self.Bind(wx.EVT_MENU, self._on_about, item_about)
         self.Bind(wx.EVT_MENU, lambda e: self.Close(), item_exit)
 
@@ -259,8 +253,6 @@ class MainWindow(wx.Frame):
             event.Skip()
         elif key == wx.WXK_F5:
             self._on_refresh(None)
-        elif key == wx.WXK_F11:
-            self._on_toggle_browser(None)
         else:
             event.Skip()
 
@@ -303,12 +295,6 @@ class MainWindow(wx.Frame):
         self.status_bar.SetStatusText("Carregando mais postagens...")
         self.reader.load_more()
 
-    def _on_toggle_browser(self, event):
-        self.reader.toggle_browser_visibility()
-        is_vis = self.reader.is_browser_visible()
-        state = "visível" if is_vis else "oculta"
-        self.status_bar.SetStatusText(f"Janela do navegador agora está {state}.")
-
     def _on_about(self, event):
         info = (
             "Accessible Timeline\n\n"
@@ -321,7 +307,6 @@ class MainWindow(wx.Frame):
             "- Control + Windows + Setas: Alternar rapidamente entre os fluxos.\n"
             "- Enter: Abrir detalhes completos da postagem.\n"
             "- F5: Atualizar o fluxo ativo.\n"
-            "- F11: Exibir ou ocultar a janela do navegador.\n"
             "- Ctrl+M: Carregar mais postagens."
         )
         wx.MessageBox(info, "Sobre o Accessible Timeline", wx.OK | wx.ICON_INFORMATION, self)
