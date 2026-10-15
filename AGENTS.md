@@ -45,7 +45,7 @@ A acessibilidade não é uma funcionalidade complementar; ela é o alicerce fund
   - Abertura de itens: `Enter` ou `Espaço`.
   - Fechamento de telas e cancelamento: `Escape`.
   - Atualização: `F5`.
-  - Alternância do navegador auxiliar: `F12`.
+  - Alternância do navegador auxiliar: `F11`.
 
 ---
 
@@ -72,7 +72,7 @@ O projeto adota separação estrita de responsabilidades em camadas desacopladas
 ### 5.1. Persistência de Autenticação
 - O navegador deve utilizar diretório persistente de perfil de usuário (`user_data_dir`) localizado no padrão do sistema operacional (`%APPDATA%/AccessibleTimeline/`).
 - Cookies, tokens de sessão, credenciais salvas e verificações em duas etapas (2FA) devem ser preservados entre reinicializações.
-- O aplicativo deve fornecer mecanismo rápido e direto para exibir a janela real do navegador (`F12`) sempre que o usuário precisar fazer login ou interagir visualmente com a página.
+- O aplicativo deve fornecer mecanismo rápido e direto para exibir a janela real do navegador (`F11`) sempre que o usuário precisar fazer login ou interagir visualmente com a página.
 
 ### 5.2. Proibição de Práticas Indevidas
 - **Sem Camuflagem ou Evasão**: É expressamente proibido implementar scripts de camuflagem de bot (como `playwright_stealth`), hacks para burlar Cloudflare/Arkose, ou mecanismos para contornar verificações de segurança dos serviços.

@@ -1,6 +1,10 @@
 # Accessible Timeline
 
-Cliente de timeline acessível para pessoas com deficiência visual e usuários de leitores de tela (NVDA e JAWS), inspirado no TWBlue e The Qube.
+Cliente de timeline acessível para pessoas com deficiência visual e usuários de leitores de tela (NVDA e JAWS), inspirado no legado de clientes consagrados como **TWBlue** e **The Qube**.
+
+Seja muito bem-vindo ao Accessible Timeline! Este projeto nasceu para resgatar a facilidade, a agilidade e a independência que tínhamos com clientes clássicos de redes sociais. Nosso compromisso é entregar uma experiência de navegação rápida, linear e desobstruída, eliminando toda a sobrecarga e o atrito das interfaces web modernas.
+
+---
 
 ## Visão Geral (Fase 1)
 
@@ -20,7 +24,10 @@ Nesta primeira fase, o Accessible Timeline implementa o núcleo fundamental de a
 accessible-timeline/
 ├── run.py                           # Ponto de entrada do aplicativo
 ├── requirements.txt                 # Dependências (wxPython, playwright)
-├── README.md
+├── README.md                        # Apresentação do projeto e guia de uso
+├── CHANGELOG.txt                    # Histórico de alterações voltado aos usuários
+├── CHANGELOG_DEV.md                 # Histórico de desenvolvimento interno
+├── AGENTS.md                        # Diretrizes permanentes de governança e acessibilidade
 ├── src/
 │   ├── core/
 │   │   ├── models.py                # Modelos universais: Post, MediaItem
@@ -70,7 +77,7 @@ python run.py
 | **Escape** | Fecha o diálogo de detalhes e retorna à lista de publicações |
 | **F5** | Solicita a atualização da timeline |
 | **Ctrl + M** | Carrega mais postagens (rola o navegador) |
-| **F12** | Exibe ou oculta a janela do Chromium (útil para login ou verificação) |
+| **F11** | Exibe ou oculta a janela do Chromium (útil para login ou verificação) |
 | **Alt + F4** | Encerra o aplicativo e o processo do navegador |
 
 ---
@@ -82,7 +89,7 @@ python run.py
    - A janela principal do Accessible Timeline será exibida e a janela do Chromium também será aberta na página do X.
    - Caso não esteja autenticado, use `Alt+Tab` para ir à janela do Chromium e faça o login no X normalmente.
    - Uma vez logado, a timeline do X carregará os dados.
-   - Pressione `F12` para ocultar o navegador Chromium e retorne ao Accessible Timeline.
+   - Pressione `F11` para ocultar o navegador Chromium e retorne ao Accessible Timeline.
 2. **Navegação na Lista**:
    - Pressione `Seta para Baixo` e `Seta para Cima`.
    - O NVDA/JAWS deve anunciar imediatamente o nome do autor, arroba, horário relativo, resumo do texto e contadores de curtidas/reposts.
@@ -94,3 +101,7 @@ python run.py
    - Pressione `Escape` para retornar exatamente ao mesmo item na lista.
 4. **Atualização**:
    - Pressione `F5` para recarregar a timeline e verifique se novos itens são incorporados no topo sem mudar a publicação que você estava lendo.
+
+---
+
+Muito obrigado por fazer parte deste início! Seu retorno e suas impressões de uso são fundamentais para construirmos juntos o melhor cliente acessível possível.

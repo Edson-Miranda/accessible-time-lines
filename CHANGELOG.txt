@@ -1,31 +1,20 @@
 Histórico de Atualizações - Accessible Timeline
 
-Bem-vindo ao histórico de novidades do Accessible Timeline!
-Aqui você encontra as novidades, melhorias e correções feitas em cada versão pública do aplicativo, explicadas de forma simples, clara e amigável para quem utiliza leitores de tela como NVDA e JAWS.
-
 ==================================================
 Versão 0.1.0A (14 de outubro de 2026)
 ==================================================
 
-Seja muito bem-vindo ao primeiro protótipo do Accessible Timeline!
-
-Este projeto nasceu para resgatar a facilidade, a agilidade e a independência que tínhamos com clientes clássicos de redes sociais, como o TWBlue e o The Qube. Nosso compromisso é entregar uma experiência desobstruída e agradável, eliminando toda a complexidade das páginas da web modernas.
-
-O que você já pode experimentar nesta versão:
-
 * Navegação linear pelas publicações do X (antigo Twitter):
-  Use as setas para Cima e para Baixo do teclado para percorrer sua linha do tempo com total fluidez.
+  Use as setas para Cima e para Baixo do teclado para percorrer a linha do tempo com agilidade.
 
-* Leitura limpa e natural no NVDA e JAWS:
-  O leitor de tela anuncia de forma direta o nome do autor, o nome de usuário (@arroba), o horário da publicação, o texto e os contadores de curtidas e repostagens, sem anúncios duplicados e sem poluição sonora.
+* Leitura limpa no NVDA e JAWS:
+  O leitor de tela anuncia diretamente o autor, o nome de usuário (@arroba), o horário da publicação, o texto e os contadores de curtidas e repostagens, sem anúncios duplicados.
 
-* Detalhes da publicação com um toque:
-  Ao encontrar uma postagem que deseja ler com mais calma, pressione a tecla Enter. Uma tela acessível será aberta exibindo o conteúdo completo. Nela você pode caminhar linha por linha ou palavra por palavra com as setas, conferir links e anexos, ou copiar todo o texto para a área de transferência. Para voltar à lista, basta pressionar Escape.
+* Detalhes completos da publicação:
+  Pressione Enter em qualquer publicação para abrir uma janela com o texto completo. Ali é possível ler linha por linha ou palavra por palavra com as setas, conferir links e anexos, ou copiar o texto. Pressione Escape para retornar à lista.
 
-* Atualização simples da timeline:
-  Pressione a tecla F5 para carregar novas postagens a qualquer momento. O aplicativo preserva o tweet que você estava lendo, evitando que o cursor pule sozinho para o topo.
+* Atualização da timeline:
+  Pressione F5 a qualquer momento para carregar novas postagens. A publicação que você estava lendo permanece selecionada, sem saltos repentinos no cursor.
 
-* Login seguro com seu navegador:
-  Ao abrir o aplicativo pela primeira vez, use a tecla F12 para exibir a janela do navegador. Você poderá fazer o login normalmente com sua conta do X, incluindo senhas salvas e códigos de verificação em duas etapas (2FA). Uma vez conectado, basta pressionar F12 para ocultar o navegador e aproveitar a interface limpa e acessível.
-
-Muito obrigado por fazer parte deste início! Seu retorno e suas impressões de uso são fundamentais para construirmos juntos o melhor cliente acessível possível.
+* Gerenciamento da janela do navegador:
+  Pressione a tecla F11 para exibir a janela do navegador Chromium quando precisar fazer login, autenticação em duas etapas (2FA) ou resolver alguma verificação. Pressione F11 novamente para ocultar a janela do navegador e continuar usando apenas a interface acessível.

@@ -53,7 +53,7 @@ class MainWindow(wx.Frame):
 
         # Menu Navegador
         browser_menu = wx.Menu()
-        item_toggle_browser = browser_menu.Append(wx.ID_ANY, "Exibir/&Ocultar Janela do Navegador\tF12", "Exibe ou oculta a janela do Chromium para login ou verificações")
+        item_toggle_browser = browser_menu.Append(wx.ID_ANY, "Exibir/&Ocultar Janela do Navegador\tF11", "Exibe ou oculta a janela do Chromium para login ou verificações")
         menu_bar.Append(browser_menu, "&Navegador")
 
         # Menu Ajuda
@@ -78,7 +78,7 @@ class MainWindow(wx.Frame):
         # Rótulo de instrução acessível
         self.info_label = wx.StaticText(
             panel,
-            label="Lista de publicações da Timeline. Use as setas Cima e Baixo para navegar, Enter para detalhes, F5 para atualizar e F12 para abrir o navegador de login:"
+            label="Lista de publicações da Timeline. Use as setas Cima e Baixo para navegar, Enter para detalhes, F5 para atualizar e F11 para abrir o navegador de login:"
         )
         sizer.Add(self.info_label, 0, wx.ALL, 8)
 
@@ -113,7 +113,7 @@ class MainWindow(wx.Frame):
             self._on_open_details(None)
         elif key == wx.WXK_F5:
             self._on_refresh(None)
-        elif key == wx.WXK_F12:
+        elif key == wx.WXK_F11:
             self._on_toggle_browser(None)
         else:
             event.Skip()
@@ -171,7 +171,7 @@ class MainWindow(wx.Frame):
             "- Setas Cima / Baixo: Navegar entre postagens\n"
             "- Enter: Abrir detalhes da postagem\n"
             "- F5: Atualizar timeline\n"
-            "- F12: Exibir ou ocultar navegador\n"
+            "- F11: Exibir ou ocultar navegador\n"
             "- Ctrl+M: Carregar mais postagens"
         )
         wx.MessageBox(info, "Sobre o Accessible Timeline", wx.OK | wx.ICON_INFORMATION, self)
