@@ -188,4 +188,34 @@ Ao receber a ordem de release para a versão `X.Y.Z`, o agente deve executar ord
   - Menu **Ajuda > Verificar Atualizações...**: Compara a versão local em execução com a última tag lançada no GitHub Releases.
   - Se houver versão mais recente: Exibe diálogo acessível anunciando a nova versão e oferece a abertura imediata do link de download no navegador padrão.
 
+---
+
+## 10. Proteção da Branch Principal (`main`), Estratégia de Branches e Pull Requests
+
+Com o repositório público e a proteção de branch ativada no GitHub, estabelece-se o seguinte fluxo estrito para qualquer colaborador ou agente de IA:
+
+### 10.1. Proibição de Commits Diretos na `main`
+- É expressamente proibido fazer commits ou `push` direto na branch `main` para desenvolvimento cotidiano de funcionalidades, refatorações ou correções de bugs.
+- A branch `main` representa o estado de produção e versões estáveis do aplicativo.
+
+### 10.2. Nomenclatura Padrão de Branches de Trabalho
+Todo novo ciclo de trabalho, implementação de funcionalidade ou resolução de issues deve ser iniciado em uma branch isolada criada a partir da `main` atualizada:
+- **Novas funcionalidades**: `feature/<nome-descritivo>` (ex.: `feature/mastodon-reader`, `feature/notification-filters`).
+- **Correção de bugs / issues**: `fix/<numero-ou-descricao-do-bug>` (ex.: `fix/issue-15-scroll-focus`, `fix/audio-device-fallback`).
+- **Refatorações e manutenção**: `refactor/<nome-do-modulo>` (ex.: `refactor/playwright-service`).
+
+### 10.3. Fluxo de Integração via Pull Request (PR)
+1. Criar e alternar para a branch de trabalho:
+   ```powershell
+   git checkout -b feature/nome-da-feature
+   ```
+2. Realizar alterações, seguir rigorosamente o padrão de testes unitários e atualizar o `CHANGELOG_DEV.md` com a versão interna correspondente (`X.Y.Z-dev.N`).
+3. Comitar e enviar a branch de trabalho para o GitHub:
+   ```powershell
+   git push -u origin feature/nome-da-feature
+   ```
+4. Criar o Pull Request apontando para a `main`, descrevendo as alterações técnicas e vinculando as issues relacionadas.
+5. Após aprovação e validação dos testes automatizados, realizar o merge na `main`.
+
+
 
