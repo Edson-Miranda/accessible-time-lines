@@ -1,3 +1,6 @@
+import os
+import tempfile
+import threading
 import webbrowser
 from typing import List, Optional
 import wx
@@ -645,5 +648,122 @@ class SettingsDialog(wx.Dialog):
             self.EndModal(wx.ID_CANCEL)
         else:
             event.Skip()
+
+
+class UpdateDownloadDialog(wx.Dialog):
+    """
+    Diálogo acessível de download e instalação da atualização do Accessible Timeline.
+    Exibe barra de progresso, porcentagem e quantidade de megabytes baixados,
+    permitindo cancelamento a qualquer momento com Escape ou botão Cancelar.
+    """
+    def __init__(self, parent: wx.Window, download_url: str, new_version: str):
+        super().__init__(
+            parent,
+            title=f"Baixando Atualização v{new_version}",
+            size=(520, 220),
+            style=wx.DEFAULT_DIALOG_STYLE
+        )
+        self.download_url = download_url
+        self.new_version = new_version
+        self._cancelled = False
+        self._download_success = False
+        self._target_zip: Optional[str] = None
+        self._last_announced_pct = -1
+
+        self._init_ui()
+        self.CenterOnParent()
+        wx.CallAfter(self._start_download)
+
+    def _init_ui(self):
+        panel = wx.Panel(self)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        self.status_label = wx.StaticText(
+            panel,
+            label=f"Baixando pacote da versão {self.new_version}. Por favor, aguarde..."
+        )
+        sizer.Add(self.status_label, 0, wx.ALL, 12)
+
+        self.gauge = wx.Gauge(panel, range=100, size=(480, 25))
+        sizer.Add(self.gauge, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 12)
+
+        self.progress_label = wx.StaticText(
+            panel,
+            label="Conectando aos servidores do GitHub..."
+        )
+        sizer.Add(self.progress_label, 0, wx.ALL, 12)
+
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.cancel_btn = wx.Button(panel, wx.ID_CANCEL, label="&Cancelar")
+        btn_sizer.Add(self.cancel_btn, 0)
+        sizer.Add(btn_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 12)
+
+        panel.SetSizer(sizer)
+
+        self.Bind(wx.EVT_BUTTON, self._on_cancel, id=wx.ID_CANCEL)
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
+
+    def _start_download(self):
+        from src.core.updater import download_update_archive
+
+        self._target_zip = os.path.join(tempfile.gettempdir(), f"AccessibleTimeline_v{self.new_version}.zip")
+
+        def _on_progress(downloaded: int, total: int):
+            if self._cancelled:
+                return False
+            pct = int((downloaded / total) * 100) if total > 0 else 0
+            mb_down = downloaded / (1024 * 1024)
+            mb_total = total / (1024 * 1024) if total > 0 else 0
+
+            def _update_ui():
+                if self._cancelled or not self:
+                    return
+                self.gauge.SetValue(min(pct, 100))
+                self.progress_label.SetLabel(f"{pct}% ({mb_down:.1f} MB de {mb_total:.1f} MB)")
+                # Atualiza título periodicamente para leitura discreta de leitores de tela
+                if pct // 20 != self._last_announced_pct // 20:
+                    self._last_announced_pct = pct
+                    self.SetTitle(f"Baixando Atualização v{self.new_version} ({pct}%)")
+
+            wx.CallAfter(_update_ui)
+            return True
+
+        def _worker():
+            success = download_update_archive(self.download_url, self._target_zip, progress_callback=_on_progress)
+            self._download_success = success
+
+            def _finish():
+                if self._cancelled:
+                    self.EndModal(wx.ID_CANCEL)
+                    return
+                if success:
+                    self.EndModal(wx.ID_OK)
+                else:
+                    wx.MessageBox(
+                        "Falha ao realizar o download da atualização.\nVerifique sua conexão de rede ou tente novamente.",
+                        "Erro no Download",
+                        wx.OK | wx.ICON_ERROR,
+                        self
+                    )
+                    self.EndModal(wx.ID_CANCEL)
+
+            wx.CallAfter(_finish)
+
+        threading.Thread(target=_worker, daemon=True, name="UpdateDownloadThread").start()
+
+    def _on_cancel(self, event):
+        self._cancelled = True
+        self.status_label.SetLabel("Cancelando download...")
+        self.cancel_btn.Enable(False)
+
+    def _on_char_hook(self, event):
+        if event.GetKeyCode() == wx.WXK_ESCAPE:
+            self._on_cancel(event)
+        else:
+            event.Skip()
+
+    def get_zip_path(self) -> Optional[str]:
+        return self._target_zip if self._download_success else None
+
 
 

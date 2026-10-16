@@ -8,6 +8,7 @@ e lista de publicações à direita totalmente operável por teclado.
 
 import ctypes
 import logging
+import os
 from typing import Dict, List, Optional, Tuple
 import threading
 import webbrowser
@@ -15,7 +16,11 @@ import wx
 from src.core.models import Post
 from src.core.timeline_store import TimelineStore
 from src.core.version import __version__
-from src.core.updater import check_for_updates
+from src.core.updater import (
+    check_for_updates,
+    get_application_directory,
+    apply_update_and_restart,
+)
 from src.core.config import config_manager
 from src.platforms.x_twitter.reader import XTimelineReader
 from src.platforms.x_twitter.executor import XActionExecutor
@@ -29,6 +34,7 @@ from src.ui.dialogs import (
     RetweetChoiceDialog,
     SendDMDialog,
     SettingsDialog,
+    UpdateDownloadDialog,
 )
 
 logger = logging.getLogger("AccessibleTimeline.MainWindow")
@@ -704,15 +710,16 @@ class MainWindow(wx.Frame):
 
             def _ui_result():
                 if info:
+                    latest = info['latest_version']
                     msg = (
                         f"Uma nova versão do Accessible Timeline está disponível!\n\n"
                         f"Versão atual: {__version__}\n"
-                        f"Nova versão: {info['latest_version']}\n\n"
-                        f"Deseja abrir a página de download agora?"
+                        f"Nova versão: {latest}\n\n"
+                        f"Deseja baixar e instalar a atualização agora?"
                     )
                     res = wx.MessageBox(msg, "Atualização Disponível", wx.YES_NO | wx.ICON_INFORMATION, self)
                     if res == wx.YES:
-                        webbrowser.open(info.get("download_url") or info.get("html_url"))
+                        self._perform_update_download(info)
                 elif not silent:
                     msg = f"Você já está utilizando a versão mais recente do Accessible Timeline (v{__version__})."
                     wx.MessageBox(msg, "Nenhuma Atualização Disponível", wx.OK | wx.ICON_INFORMATION, self)
@@ -722,6 +729,55 @@ class MainWindow(wx.Frame):
             wx.CallAfter(_ui_result)
 
         threading.Thread(target=_worker, daemon=True, name="CheckUpdatesThread").start()
+
+    def _perform_update_download(self, info: dict):
+        """Baixa o pacote compactado da atualização e aplica diretamente na pasta da aplicação."""
+        download_url = info.get("download_url") or info.get("html_url", "")
+        # Se for link direto para arquivo zip, utiliza o baixador embutido
+        if download_url and (download_url.endswith(".zip") or "/releases/download/" in download_url):
+            dlg = UpdateDownloadDialog(
+                self,
+                download_url=download_url,
+                new_version=info.get("latest_version", "")
+            )
+            try:
+                res = dlg.ShowModal()
+                if res == wx.ID_OK:
+                    zip_path = dlg.get_zip_path()
+                    if zip_path and os.path.exists(zip_path):
+                        target_dir = get_application_directory()
+                        confirm_msg = (
+                            f"O download da versão {info.get('latest_version')} foi concluído com sucesso!\n\n"
+                            f"O aplicativo será reiniciado para extrair e aplicar os arquivos na pasta de instalação:\n"
+                            f"{target_dir}\n\n"
+                            f"Deseja fechar o Accessible Timeline e atualizar agora?"
+                        )
+                        restart_res = wx.MessageBox(
+                            confirm_msg,
+                            "Aplicar Atualização",
+                            wx.YES_NO | wx.ICON_INFORMATION,
+                            self
+                        )
+                        if restart_res == wx.YES:
+                            self.status_bar.SetStatusText("Aplicando atualização e reiniciando...")
+                            current_pid = os.getpid()
+                            success = apply_update_and_restart(zip_path, target_dir, current_pid)
+                            if success:
+                                self.Close(True)
+                                return
+                            else:
+                                wx.MessageBox(
+                                    "Não foi possível iniciar o assistente de atualização automática.\n"
+                                    "Você pode extrair o arquivo compactado manualmente se desejar.",
+                                    "Erro ao Aplicar",
+                                    wx.OK | wx.ICON_ERROR,
+                                    self
+                                )
+            finally:
+                dlg.Destroy()
+        else:
+            # Fallback caso não seja um link direto de arquivo compactado
+            webbrowser.open(download_url or info.get("html_url", ""))
 
     def _on_check_updates(self, event=None):
         """Ação acionada pelo menu Ajuda > Verificar Atualizações..."""
