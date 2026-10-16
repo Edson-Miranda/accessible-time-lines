@@ -634,7 +634,9 @@ class MainWindow(wx.Frame):
 
     def _on_about(self, event):
         info = (
-            f"Accessible Timeline v{__version__}\n\n"
+            f"Accessible Timeline v{__version__}\n"
+            "Desenvolvido por TechTales Entertainment\n"
+            "Site oficial: https://techtales.com.br\n\n"
             "Cliente acessível para redes sociais projetado para pessoas com deficiência visual.\n"
             "Inspirado no TWBlue e The Qube com foco prioritário em leitores de tela (NVDA e JAWS).\n\n"
             "Navegação por Teclado:\n"
@@ -657,7 +659,8 @@ class MainWindow(wx.Frame):
             "Efeitos Sonoros (Menu Áudio):\n"
             "- Sons clássicos do TWBlue para ações, notificações e avisos de limite de texto.\n"
             "- Ctrl + Shift + S: Ativar / Desativar efeitos sonoros.\n"
-            "- Seleção de temas sonoros: Padrão (TWBlue), Clássico, Qwitter, Magical Fountain, FreakyBlue e FightingGames."
+            "- Seleção de temas sonoros: Padrão (TWBlue), Clássico, Qwitter, Magical Fountain, FreakyBlue e FightingGames.\n\n"
+            "TechTales Entertainment - https://techtales.com.br"
         )
         wx.MessageBox(info, f"Sobre o Accessible Timeline v{__version__}", wx.OK | wx.ICON_INFORMATION, self)
 
