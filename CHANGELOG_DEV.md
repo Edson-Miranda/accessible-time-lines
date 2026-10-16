@@ -1,3 +1,17 @@
+## [0.1.0-dev.13] - 2026-10-16
+
+### Adicionado
+- **Isolamento Total com Chromium Embutido (`src/platforms/x_twitter/browser.py`, `.github/workflows/build-release.yml`, `.gitignore`)**:
+  - Implementada a função `setup_embedded_browsers_path()` para apontar dinamicamente a variável de ambiente `PLAYWRIGHT_BROWSERS_PATH` para o diretório `browsers/` presente ao lado do executável distribuído (modo congelado PyInstaller) ou na raiz do projeto (modo desenvolvimento).
+  - Atualizada a ordem de inicialização em `_launch_persistent_context_with_fallback` para priorizar estritamente o Chromium embutido dedicado (`channel=None`), garantindo total independência em relação aos navegadores pessoais do usuário (Edge/Chrome).
+  - Incluído step de instalação de componentes do Chromium direcionado para `dist\AccessibleTimeline\browsers` no workflow do GitHub Actions antes da geração do pacote `.zip` portátil.
+  - Atualizado `.gitignore` para ignorar as pastas de binários de navegadores locais (`browsers/` e `temp_browsers/`).
+
+### Testes
+- Adicionado módulo de teste unitário `tests/test_browser_setup.py` cobrindo a detecção do diretório de navegadores embutidos e a priorização do canal `None`. Suíte de testes expandida para 26 testes aprovados.
+
+---
+
 ## [0.1.0-dev.12] - 2026-10-16
 
 ### Adicionado

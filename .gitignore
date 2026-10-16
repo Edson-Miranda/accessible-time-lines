@@ -35,6 +35,8 @@ ENV/
 # Playwright browser profiles / user data
 data/
 x_profile/
+browsers/
+temp_browsers/
 *.local
 
 # IDE / Editor
