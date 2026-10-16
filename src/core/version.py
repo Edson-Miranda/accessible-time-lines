@@ -2,7 +2,7 @@
 Informações de versão e metadados do Accessible Timeline.
 """
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 APP_NAME = "Accessible Timeline"
 GITHUB_OWNER = "Edson-Miranda"
 GITHUB_REPO = "accessible-timeline"
