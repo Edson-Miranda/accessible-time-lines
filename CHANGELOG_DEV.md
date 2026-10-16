@@ -1,3 +1,17 @@
+## [0.1.0-dev.16] - 2026-10-16
+
+### Adicionado
+- **Download e Instalação In-Place de Atualizações (`src/core/updater.py`, `src/ui/dialogs.py`, `src/ui/main_window.py`)**:
+  - Implementação de `download_update_archive` com streaming em blocos (chunked streaming), cálculo de progresso em tempo real e cancelamento seguro sem deixar arquivos parciais órfãos.
+  - Implementação de `apply_update_and_restart` com geração de script batch auxiliar independente (`DETACHED_PROCESS`), que aguarda a liberação de travas de arquivos e DLLs após encerramento do processo principal, extrai os novos binários diretamente sobre o diretório da aplicação (`tar -xf` ou PowerShell `Expand-Archive`), exclui o arquivo `.zip` temporário e reinicia o executável.
+  - Criação do diálogo acessível `UpdateDownloadDialog` com barra de progresso nativa (`wx.Gauge`), indicação de porcentagem e megabytes baixados, e suporte a cancelamento com `Esc` ou botão Cancelar.
+  - Integração do fluxo na janela principal: ao confirmar a disponibilidade de atualização, o download inicia imediatamente no aplicativo, seguido de confirmação antes do reinício automático.
+
+### Testes
+- Adição de testes unitários em `tests/test_updater.py` cobrindo resolução de diretório da aplicação, download simulado com relatório de progresso, cancelamento antecipado e geração íntegra do script batch de atualização in-place. Suíte expandida para 34 testes aprovados.
+
+---
+
 ## [0.1.0-dev.15] - 2026-10-16
 
 ### Adicionado
