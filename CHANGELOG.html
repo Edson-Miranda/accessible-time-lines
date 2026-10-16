@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accessible Timeline - Histórico de Atualizações / Changelog</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: #1a1a1a;
+      background-color: #fbfbfb;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    h1, h2, h3 {
+      color: #0d47a1;
+    }
+    h1 {
+      border-bottom: 2px solid #0d47a1;
+      padding-bottom: 10px;
+    }
+    h2 {
+      margin-top: 30px;
+      border-bottom: 1px solid #e0e0e0;
+      padding-bottom: 6px;
+    }
+    .lang-nav {
+      background: #e3f2fd;
+      padding: 12px 18px;
+      border-radius: 6px;
+      margin-bottom: 25px;
+      font-weight: bold;
+    }
+    .lang-nav a {
+      color: #0d47a1;
+      text-decoration: underline;
+      margin-right: 20px;
+    }
+    .version-badge {
+      display: inline-block;
+      background-color: #0d47a1;
+      color: #ffffff;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 0.9em;
+      margin-bottom: 10px;
+    }
+    .version-date {
+      color: #666;
+      font-style: italic;
+      margin-left: 8px;
+    }
+    ul {
+      padding-left: 24px;
+    }
+    li {
+      margin-bottom: 8px;
+    }
+    code, kbd {
+      background: #eee;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      padding: 2px 6px;
+      font-size: 0.95em;
+      font-family: Consolas, monospace;
+    }
+    hr {
+      margin: 40px 0;
+      border: 0;
+      border-top: 2px solid #e0e0e0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" role="main">
+    <nav class="lang-nav" aria-label="Seleção de idioma / Language selection">
+      <span>Idiomas / Languages:</span>
+      <a href="#pt-br">Versão em Português</a>
+      <a href="#en-us">English Version</a>
+    </nav>
+
+    <!-- ==================== SEÇÃO PORTUGUÊS ==================== -->
+    <article id="pt-br" lang="pt-BR">
+      <header>
+        <h1>Accessible Timeline - Histórico de Atualizações</h1>
+        <p><strong>Desenvolvido por:</strong> <a href="https://techtales.com.br" target="_blank">TechTales Entertainment</a> | <strong>Público-alvo:</strong> Pessoas com deficiência visual e usuários de leitores de tela (NVDA e JAWS).</p>
+      </header>
+
+      <!-- Versão 0.2.1A -->
+      <section aria-labelledby="v021a-pt">
+        <h2 id="v021a-pt"><span class="version-badge">Versão 0.2.1A</span> <span class="version-date">(16 de outubro de 2026)</span></h2>
+        <ul>
+          <li><strong>Isolamento Total com Chromium Embutido e Dedicado:</strong> O pacote do aplicativo agora inclui seu próprio motor Chromium portátil embutido dentro da pasta <code>browsers/</code>. O aplicativo possui <strong>zero uso e zero dependência</strong> dos navegadores instalados no seu computador (como Edge ou Google Chrome), mantendo seus perfis pessoais, senhas e histórico totalmente intocados e isolados.</li>
+          <li><strong>Correção Definitiva de Abertura do Navegador para Login:</strong> Solucionado o problema onde o navegador não abria para login em computadores sem ambiente de desenvolvimento Python instalado. O Chromium embutido é iniciado de forma confiável e independente.</li>
+          <li><strong>Alternância Rápida da Janela do Navegador (<kbd>Ctrl + Shift + B</kbd>):</strong> Adicionada a opção no menu <em>Timeline</em> e o atalho de teclado <kbd>Ctrl + Shift + B</kbd> para exibir ou ocultar a janela do navegador caso seja necessário realizar verificações adicionais de segurança, 2FA ou alternar de conta.</li>
+          <li><strong>Identidade e Suporte Oficial TechTales Entertainment:</strong> Inclusão dos créditos da TechTales Entertainment no diálogo Sobre (<kbd>F1</kbd>), manuais e links para a página oficial: <a href="https://techtales.com.br" target="_blank">https://techtales.com.br</a>.</li>
+          <li><strong>Documentação e Changelog Acessíveis em HTML:</strong> Disponibilização tanto do manual do usuário (<code>README.html</code>) quanto do histórico de atualizações (<code>CHANGELOG.html</code>) em páginas HTML totalmente formatadas e semânticas para leitores de tela em Português e Inglês.</li>
+        </ul>
+      </section>
+
+      <!-- Versão 0.2.0 -->
+      <section aria-labelledby="v020-pt">
+        <h2 id="v020-pt"><span class="version-badge">Versão 0.2.0</span> <span class="version-date">(16 de outubro de 2026)</span></h2>
+        <ul>
+          <li><strong>Efeitos Sonoros Clássicos do TWBlue:</strong> Integração de biblioteca de áudio BASS de baixa latência com sons marcantes do TWBlue para envio, respostas, curtidas, novos posts e avisos de limite de texto. Seleção de 6 temas no menu Áudio e atalho <kbd>Ctrl + Shift + S</kbd> para ativar/desativar sons.</li>
+          <li><strong>Ações Interativas na Timeline:</strong> Nova publicação (<kbd>Ctrl + N</kbd>) com contador regressivo de 280 caracteres, responder (<kbd>Ctrl + R</kbd>), repostar e citar (<kbd>Ctrl + Shift + R</kbd> ou <kbd>Ctrl + Shift + C</kbd>), curtir/descurtir (<kbd>Ctrl + L</kbd> ou tecla <kbd>L</kbd>) e mensagens diretas (<kbd>Ctrl + D</kbd>).</li>
+          <li><strong>Árvore Nativa de Fluxos (Estilo TWBlue / The Qube):</strong> Exibição de conta e abas (Para você, Seguindo, Menções e Mensagens diretas) com navegação fluida por <kbd>Tab</kbd>, <kbd>Shift + Tab</kbd> e atalho global <kbd>Ctrl + Win + Setas</kbd>.</li>
+          <li><strong>Leitura Completa nas Setas e Abertura Rápida de Links:</strong> Leitura de todo o texto sem truncamento com setas para Cima/Baixo e abertura de links com <kbd>Ctrl + Enter</kbd> (com seletor acessível se houver múltiplos links).</li>
+          <li><strong>Pré-carregamento em Segundo Plano:</strong> Inicialização automática de todos os fluxos e transição transparente para modo 100% invisível em segundo plano após o login.</li>
+        </ul>
+      </section>
+
+      <!-- Versão 0.1.0A -->
+      <section aria-labelledby="v010a-pt">
+        <h2 id="v010a-pt"><span class="version-badge">Versão 0.1.0A</span> <span class="version-date">(14 de outubro de 2026)</span></h2>
+        <ul>
+          <li><strong>Navegação Linear Acessível:</strong> Percorrimento rápido da linha do tempo do X usando as setas para Cima e para Baixo.</li>
+          <li><strong>Leitura Limpa no NVDA e JAWS:</strong> Controles Win32 nativos que evitam anúncios duplicados ou redundâncias no sintetizador.</li>
+          <li><strong>Visualização de Detalhes Completos:</strong> Pressione <kbd>Enter</kbd> para abrir diálogo acessível de leitura linha por linha ou cópia de texto.</li>
+          <li><strong>Atualização com Preservação de Cursor:</strong> Pressione <kbd>F5</kbd> para carregar novos posts mantendo a posição de leitura intacta.</li>
+        </ul>
+      </section>
+    </article>
+
+    <hr>
+
+    <!-- ==================== SEÇÃO INGLÊS ==================== -->
+    <article id="en-us" lang="en-US">
+      <header>
+        <h1>Accessible Timeline - Update History</h1>
+        <p><strong>Developed by:</strong> <a href="https://techtales.com.br" target="_blank">TechTales Entertainment</a> | <strong>Target Audience:</strong> Blind and visually impaired users navigating with screen readers (NVDA & JAWS).</p>
+      </header>
+
+      <!-- Version 0.2.1A -->
+      <section aria-labelledby="v021a-en">
+        <h2 id="v021a-en"><span class="version-badge">Version 0.2.1A</span> <span class="version-date">(October 16, 2026)</span></h2>
+        <ul>
+          <li><strong>Complete Isolation with Dedicated Embedded Chromium:</strong> The application distributable package now includes its own portable Chromium engine inside the <code>browsers/</code> directory. The client has <strong>zero usage and zero dependency</strong> on the personal browsers installed on your computer (such as Microsoft Edge or Google Chrome), keeping your personal accounts, passwords, and history completely untouched and isolated.</li>
+          <li><strong>Reliable Login Browser Window Launch:</strong> Resolved an issue where the browser window failed to launch for the initial login on systems lacking Python developer tools. The bundled Chromium runs out of the box with zero external configuration required.</li>
+          <li><strong>Browser Window Toggle Shortcut (<kbd>Ctrl + Shift + B</kbd>):</strong> Added a menu item under <em>Timeline</em> and keyboard shortcut <kbd>Ctrl + Shift + B</kbd> to toggle the browser window visibility whenever you need to handle security checks, 2FA, or switch accounts.</li>
+          <li><strong>Official TechTales Entertainment Branding & Support:</strong> Embedded official TechTales Entertainment credits in the About dialog (<kbd>F1</kbd>), user guide, and links to the official site: <a href="https://techtales.com.br" target="_blank">https://techtales.com.br</a>.</li>
+          <li><strong>Accessible Bilingual HTML Documentation & Changelog:</strong> Both the User Guide (<code>README.html</code>) and Update History (<code>CHANGELOG.html</code>) are provided as fully semantic and accessible HTML pages for screen reader navigation in Portuguese and English.</li>
+        </ul>
+      </section>
+
+      <!-- Version 0.2.0 -->
+      <section aria-labelledby="v020-en">
+        <h2 id="v020-en"><span class="version-badge">Version 0.2.0</span> <span class="version-date">(October 16, 2026)</span></h2>
+        <ul>
+          <li><strong>Classic TWBlue Sound Effects:</strong> Low-latency BASS audio engine integration delivering TWBlue sound packs for tweets, replies, retweets, likes, direct messages, incoming events, and character warnings. Selection of 6 themes in Audio menu and <kbd>Ctrl + Shift + S</kbd> shortcut.</li>
+          <li><strong>Interactive Timeline Actions:</strong> Compose tweet (<kbd>Ctrl + N</kbd>) with 280-character countdown, reply (<kbd>Ctrl + R</kbd>), retweet/quote (<kbd>Ctrl + Shift + R</kbd> or <kbd>Ctrl + Shift + C</kbd>), like/unlike (<kbd>Ctrl + L</kbd> or key <kbd>L</kbd>), and direct message (<kbd>Ctrl + D</kbd>).</li>
+          <li><strong>Native Streams TreeView (TWBlue / The Qube Style):</strong> Account and stream folders (For You, Following, Mentions, Direct Messages) navigable with <kbd>Tab</kbd>, <kbd>Shift + Tab</kbd>, and global stream switching via <kbd>Ctrl + Win + Arrows</kbd>.</li>
+          <li><strong>Full Text Reading with Arrow Keys & Fast Link Opening:</strong> Complete tweet reading without truncation using arrow keys, and link opening with <kbd>Ctrl + Enter</kbd> with accessible link chooser.</li>
+          <li><strong>Background Preloading & Silent Operation:</strong> Automated startup visit across all streams and silent headless background mode once logged in.</li>
+        </ul>
+      </section>
+
+      <!-- Version 0.1.0A -->
+      <section aria-labelledby="v010a-en">
+        <h2 id="v010a-en"><span class="version-badge">Version 0.1.0A</span> <span class="version-date">(October 14, 2026)</span></h2>
+        <ul>
+          <li><strong>Accessible Linear Navigation:</strong> Fast linear timeline browsing using Up and Down arrow keys.</li>
+          <li><strong>Clean Announcements for NVDA and JAWS:</strong> Native Win32 list control delivering smooth, non-redundant screen reader speech.</li>
+          <li><strong>Full Post Details Window:</strong> Press <kbd>Enter</kbd> to inspect complete tweet text line by line or copy contents.</li>
+          <li><strong>Safe Timeline Refreshing:</strong> Press <kbd>F5</kbd> to refresh tweets while maintaining current reading cursor position.</li>
+        </ul>
+      </section>
+    </article>
+  </div>
+</body>
+</html>
