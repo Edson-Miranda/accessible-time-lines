@@ -48,6 +48,12 @@ jobs:
             --add-binary "src/audio/lib/x64/bass.dll;src/audio/lib/x64" `
             run.py
 
+      - name: Embed Chromium Browser into Package
+        shell: powershell
+        run: |
+          $env:PLAYWRIGHT_BROWSERS_PATH = "$PWD\dist\AccessibleTimeline\browsers"
+          playwright install chromium
+
       - name: Package Distributable Zip
         shell: powershell
         run: |

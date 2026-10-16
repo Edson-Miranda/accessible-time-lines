@@ -12,6 +12,7 @@ from pathlib import Path
 import queue
 import shutil
 import sqlite3
+import sys
 import threading
 import time
 from typing import Callable, Optional
@@ -20,6 +21,35 @@ from src.platforms.x_twitter.parser import parse_x_graphql_response
 from src.core.models import Post
 
 logger = logging.getLogger("AccessibleTimeline.Browser")
+
+
+def setup_embedded_browsers_path():
+    """Configura o diretório de navegadores do Playwright para utilizar a cópia embutida no aplicativo."""
+    if "PLAYWRIGHT_BROWSERS_PATH" in os.environ and os.environ["PLAYWRIGHT_BROWSERS_PATH"]:
+        return
+
+    # 1. Modo compilado (PyInstaller): pasta 'browsers' ao lado do executável
+    if getattr(sys, "frozen", False):
+        exe_dir = Path(sys.executable).parent
+        embedded_browsers = exe_dir / "browsers"
+        if embedded_browsers.exists():
+            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(embedded_browsers)
+            logger.info(f"Usando navegadores embutidos no pacote: {embedded_browsers}")
+            return
+
+    # 2. Modo de desenvolvimento / ambiente local: pasta 'browsers' na raiz do projeto se existir
+    try:
+        project_root = Path(__file__).resolve().parent.parent.parent.parent
+        dev_browsers = project_root / "browsers"
+        if dev_browsers.exists():
+            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(dev_browsers)
+            logger.info(f"Usando navegadores embutidos de desenvolvimento: {dev_browsers}")
+            return
+    except Exception:
+        pass
+
+
+setup_embedded_browsers_path()
 
 
 def is_profile_authenticated(data_dir: str) -> bool:
@@ -559,13 +589,13 @@ class XBrowserManager:
         headless: bool
     ) -> BrowserContext:
         """
-        Inicia o Chromium com estratégia de fallback transparente:
-        1. Microsoft Edge do sistema operacional (channel='msedge')
-        2. Google Chrome (channel='chrome')
-        3. Chromium do Playwright (channel=None)
+        Inicia o Chromium com estratégia focada no navegador embutido e isolado:
+        1. Chromium dedicado do Playwright (channel=None / pasta embutida 'browsers')
+        2. Microsoft Edge (channel='msedge') como contingência
+        3. Google Chrome (channel='chrome') como contingência
         4. Auto-instalação caso nenhum navegador exista
         """
-        channels_to_try = ["msedge", "chrome", None]
+        channels_to_try = [None, "msedge", "chrome"]
         common_args = [
             "--disable-blink-features=AutomationControlled",
             "--no-first-run",
@@ -583,13 +613,13 @@ class XBrowserManager:
                 if ch:
                     kwargs["channel"] = ch
                 ctx = pw.chromium.launch_persistent_context(**kwargs)
-                logger.info(f"Navegador iniciado com sucesso (canal={ch or 'padrão'}, headless={headless})")
+                logger.info(f"Navegador iniciado com sucesso (canal={ch or 'embutido/padrão'}, headless={headless})")
                 return ctx
             except Exception as e:
-                logger.debug(f"Tentativa de iniciar navegador via canal '{ch}' falhou: {e}")
+                logger.debug(f"Tentativa de iniciar navegador via canal '{ch or 'embutido'}' falhou: {e}")
                 continue
 
-        # Se todos os navegadores locais falharem, dispara auto-instalação
+        # Se todos os navegadores falharem, dispara auto-instalação
         logger.warning("Nenhum navegador Chromium encontrado. Baixando componentes...")
         self._set_status("Instalando componentes do navegador pela primeira vez. Por favor, aguarde...")
         self._auto_install_chromium()
@@ -606,7 +636,8 @@ class XBrowserManager:
         import subprocess
         import sys
         try:
-            subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True, timeout=180)
+            env = os.environ.copy()
+            subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], env=env, check=True, timeout=180)
         except Exception as e:
             logger.error(f"Falha ao executar auto-instalação do Chromium: {e}")
 
