@@ -1,3 +1,19 @@
+## [0.1.0-dev.14] - 2026-10-16
+
+### Adicionado
+- **Verificação Automática de Atualizações em Segundo Plano (`src/ui/main_window.py`)**:
+  - Implementada rotina assíncrona silenciosa disparada automaticamente 3.5 segundos após a inicialização da aplicação para checar novas releases no GitHub.
+  - Refatoração de `_check_updates_worker` para diferenciar chamadas silenciosas (não exibe mensagem se estiver atualizado) de manuais (via menu Ajuda).
+- **Changelog Acessível em HTML Bilíngue (`CHANGELOG.html`, `.github/workflows/build-release.yml`)**:
+  - Criação do documento HTML semântico com alternador de idioma e navegação estruturada para NVDA e JAWS.
+  - Inclusão do `CHANGELOG.html` no empacotamento do executável e no pacote portátil `.zip`.
+
+### Modificado
+- **Sincronização da Versão Pública 0.2.1 (`src/core/version.py`, `CHANGELOG.txt`, `README.html`, `AGENTS.md`)**:
+  - Transição de versão para o padrão semântico puro `0.2.1`, garantindo compatibilidade retroativa imediata com o verificador de versões em execução no build `0.2.0`.
+
+---
+
 ## [0.1.0-dev.13] - 2026-10-16
 
 ### Adicionado
