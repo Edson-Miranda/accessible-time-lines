@@ -1,3 +1,21 @@
+## [0.1.0-dev.15] - 2026-10-16
+
+### Adicionado
+- **Gerenciador de Configurações Persistentes (`src/core/config.py`)**:
+  - Implementação de `ConfigManager` thread-safe que persiste preferências em formato JSON em `%APPDATA%\AccessibleTimeline\config.json` com recuperação automática contra arquivos corrompidos.
+  - Persistência das preferências de verificação de atualizações (`check_updates_automatically`), ativação de som (`sound_enabled`) e tema sonoro (`sound_theme`).
+- **Diálogo Acessível de Configurações (`src/ui/dialogs.py`, `src/ui/main_window.py`)**:
+  - Criação da classe `SettingsDialog` com caixa de seleção nativa (`wx.CheckBox`) para ligar e desligar a verificação automática de atualizações ao iniciar o aplicativo.
+  - Adição do menu **Opções** na barra de menus contendo o item **Configurações...** com o atalho `Ctrl + P`.
+  - Vinculação da verificação em segundo plano na inicialização ao valor configurado pelo usuário.
+- **Documentação de Atalhos (`README.html`, tela "Sobre")**:
+  - Inclusão do atalho `Ctrl + P` nas tabelas de atalhos e diálogos informativos.
+
+### Testes
+- Adicionado módulo de teste unitário `tests/test_config.py` cobrindo carregamento, gravação e tolerância a falhas do `ConfigManager`. Suíte completa com 30 testes aprovados.
+
+---
+
 ## [0.1.0-dev.14] - 2026-10-16
 
 ### Adicionado
