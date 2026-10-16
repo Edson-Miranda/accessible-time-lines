@@ -16,6 +16,63 @@ class MediaItem:
     alt_text: Optional[str] = None
 
 
+def format_relative_time(dt: Optional[datetime], now: Optional[datetime] = None) -> str:
+    """
+    Formata um datetime em tempo relativo amigável e acessível (estilo TWBlue):
+    Exemplos:
+    - 'agora há pouco' (< 45s)
+    - '1 minuto atrás' / '5 minutos atrás'
+    - '1 hora atrás' / '3 horas atrás'
+    - 'ontem' (se 1 dia) / '4 dias atrás'
+    - '1 semana atrás' / '2 semanas atrás'
+    - '1 mês atrás' / '5 meses atrás'
+    - '1 ano atrás' / '2 anos atrás'
+    """
+    if not dt:
+        return ""
+
+    if now is None:
+        if dt.tzinfo is not None:
+            now = datetime.now(dt.tzinfo)
+        else:
+            now = datetime.now()
+
+    # Normaliza fuso horário caso um tenha e outro não
+    if dt.tzinfo is not None and now.tzinfo is None:
+        now = now.astimezone(dt.tzinfo)
+    elif dt.tzinfo is None and now.tzinfo is not None:
+        dt = dt.astimezone(now.tzinfo)
+
+    diff_seconds = (now - dt).total_seconds()
+    if diff_seconds < 45:
+        return "agora há pouco"
+
+    diff_minutes = int(diff_seconds / 60)
+    if diff_minutes < 60:
+        return f"{diff_minutes} minuto atrás" if diff_minutes == 1 else f"{diff_minutes} minutos atrás"
+
+    diff_hours = int(diff_seconds / 3600)
+    if diff_hours < 24:
+        return f"{diff_hours} hora atrás" if diff_hours == 1 else f"{diff_hours} horas atrás"
+
+    diff_days = int(diff_seconds / 86400)
+    if diff_days < 7:
+        if diff_days == 1:
+            return "ontem"
+        return f"{diff_days} dias atrás"
+
+    diff_weeks = int(diff_days / 7)
+    if diff_weeks < 5:
+        return f"{diff_weeks} semana atrás" if diff_weeks == 1 else f"{diff_weeks} semanas atrás"
+
+    diff_months = int(diff_days / 30)
+    if diff_months < 12:
+        return f"{diff_months} mês atrás" if diff_months == 1 else f"{diff_months} meses atrás"
+
+    diff_years = int(diff_days / 365)
+    return f"{diff_years} ano atrás" if diff_years == 1 else f"{diff_years} anos atrás"
+
+
 @dataclass
 class Post:
     """Representa uma publicação de qualquer rede social suportada."""
@@ -86,10 +143,17 @@ class Post:
 
         return links
 
+    def get_relative_time(self, now: Optional[datetime] = None) -> str:
+        """Retorna o tempo decorrido desde a publicação em formato amigável."""
+        if self.created_at:
+            return format_relative_time(self.created_at, now=now)
+        return self.created_at_str
+
     def to_accessible_summary(self) -> str:
         """
         Retorna o texto da publicação para anúncio natural na lista pelo leitor de tela.
         Lê o post completo sem truncar, normalizando quebras de linha em espaços.
+        Exibe tempo relativo amigável no estilo TWBlue (ex.: '2 horas atrás', '3 semanas atrás').
         """
         prefix = ""
         if self.is_retweet and self.retweeted_by:
@@ -97,7 +161,8 @@ class Post:
         elif self.is_reply and self.replying_to:
             prefix = f"[Respondendo a @{self.replying_to}] "
 
-        time_part = f", {self.created_at_str}" if self.created_at_str else ""
+        rel_time = self.get_relative_time()
+        time_part = f", {rel_time}" if rel_time else ""
         
         # Normalizar quebras de linha em espaços para leitura contínua e fluida pelo leitor de tela
         clean_text = " ".join(self.text.split())
@@ -127,7 +192,12 @@ class Post:
             lines.append(f"Em resposta a: @{self.replying_to}")
 
         lines.append(f"Autor: {self.author_name} (@{self.author_username})")
-        if self.created_at_str:
+        rel_time = self.get_relative_time()
+        if rel_time and self.created_at_str:
+            lines.append(f"Data: {rel_time} ({self.created_at_str})")
+        elif rel_time:
+            lines.append(f"Data: {rel_time}")
+        elif self.created_at_str:
             lines.append(f"Data/Hora: {self.created_at_str}")
         lines.append("")
         lines.append(self.text)

@@ -124,10 +124,10 @@ O projeto adota uma separação rigorosa entre **versões internas de desenvolvi
   - Documenta alterações técnicas detalhadas, refatorações, adições de módulos e testes.
   - Atualizado a cada avanço técnico ou versão interna.
   - **Formatação Limpa**: O arquivo deve conter exclusivamente as seções das versões diretamente (iniciando em `## [X.Y.Z-dev.N]`), sem comentários introdutórios, títulos gerais ou preâmbulos no topo do arquivo.
-- **Changelog Público (`CHANGELOG.txt`)**:
-  - Voltado aos usuários finais, em formato de texto simples (.txt), com escrita calorosa, clara e amigável para leitores de tela.
-  - **REGRA PERMANENTE**: O arquivo `CHANGELOG.txt` **NUNCA** deve ser atualizado automaticamente em tarefas cotidianas.
-  - **Gatilho de Atualização**: O `CHANGELOG.txt` só será atualizado quando o usuário der a ordem explícita:
+- **Changelog Público Multilíngue (`CHANGELOG.html`)**:
+  - Voltado aos usuários finais, em formato HTML semântico com tema escuro e abas acessíveis bilíngues ([PT-BR] e [EN-US]), com escrita calorosa, clara e amigável para leitores de tela.
+  - **REGRA PERMANENTE**: O arquivo `CHANGELOG.html` **NUNCA** deve ser atualizado automaticamente em tarefas cotidianas.
+  - **Gatilho de Atualização**: O `CHANGELOG.html` só será atualizado quando o usuário der a ordem explícita:
     > *"gere um changelog da versão interna X até a Y com a versão tal"*
   - Nesse momento, e apenas nesse momento, o agente irá consolidar as alterações das versões internas `X` até `Y` sob a versão pública designada pelo usuário.
 
@@ -146,9 +146,9 @@ O processo de release é estritamente manual e ativado sob comando explícito do
 
 ### 9.2. Protocolo de Execução Pré-Release (Checklist Obrigatório)
 Ao receber a ordem de release para a versão `X.Y.Z`, o agente deve executar ordenadamente as seguintes etapas:
-1. **Consolidação Bilíngue do Changelog e Documentação (`CHANGELOG.txt`, `CHANGELOG.html` e `README.html`)**:
+1. **Consolidação Bilíngue do Changelog e Documentação (`CHANGELOG.html` e `README.html`)**:
    - Consolidar as alterações técnicas relevantes para o usuário final acumuladas desde a última release pública até a versão interna vigente.
-   - Gerar o `CHANGELOG.txt` e o `CHANGELOG.html` estruturados em seções bilíngues acessíveis: Português ([PT-BR]) e Inglês ([EN-US]).
+   - Gerar o `CHANGELOG.html` estruturado em seções bilíngues acessíveis: Português ([PT-BR]) e Inglês ([EN-US]).
    - Gerar/atualizar o manual acessível `README.html` em Português e Inglês com tabela completa de atalhos e instruções para leitores de tela.
    - Manter o tom caloroso, limpo e altamente descritivo para leitores de tela NVDA e JAWS.
 2. **Sincronização de Metadados de Versão**:
@@ -180,7 +180,7 @@ Ao receber a ordem de release para a versão `X.Y.Z`, o agente deve executar ord
   2. Instala dependências do Python, Playwright Chromium e PyInstaller.
   3. Executa a suíte de testes unitários para verificação em ambiente isolado.
   4. Compila o binário standalone e empacota todos os arquivos de recursos (`sounds/`, `bass.dll`, etc.) em um pacote portátil ZIP (`AccessibleTimeline-vX.Y.Z-windows-x64.zip`).
-  5. Cria automaticamente a **Release Oficial no GitHub Releases** associada à tag, anexando o pacote `.zip` e as notas da versão do `CHANGELOG.txt`.
+  5. Cria automaticamente a **Release Oficial no GitHub Releases** associada à tag, anexando o pacote `.zip`.
 
 ### 9.4. Verificação de Atualizações pelo Próprio Aplicativo (Auto-Updater)
 - O módulo `src/core/updater.py` consulta a API pública do GitHub (`/repos/{owner}/{repo}/releases/latest`).

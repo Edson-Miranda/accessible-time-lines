@@ -1,3 +1,20 @@
+## [0.1.0-dev.17] - 2026-10-16
+
+### Adicionado
+- **Ordenação Reversa e Tempos Relativos Estilo TWBlue (`src/core/models.py`, `src/core/timeline_store.py`)**:
+  - Implementação da função `format_relative_time` e método `Post.get_relative_time`, permitindo que leitores de tela NVDA/JAWS anunciem o tempo decorrido natural (ex.: "agora há pouco", "2 horas atrás", "ontem", "3 semanas atrás") na lista e no visualizador detalhado de postagens.
+  - Implementação de ordenação cronológica estrita em `TimelineStore.add_posts`, garantindo que publicações mais recentes sempre permaneçam no topo da lista (índice 0) e mais antigas na parte inferior, preservando de forma estável o item selecionado pelo cursor de leitura.
+- **Recarregamento Automático e Captura de Posts Criados (`src/platforms/x_twitter/browser.py`)**:
+  - Navegação automática de volta para `https://x.com/home` após submissão bem-sucedida de novas postagens no Chromium, assegurando a interceptação da resposta da timeline e a inclusão imediata do novo tweet no topo do feed com reprodução de som.
+- **Redesign Acessível da Documentação e Remoção do Legado (`README.html`, `CHANGELOG.html`, `.github/workflows/build-release.yml`, `AGENTS.md`)**:
+  - Redesign completo do `README.html` e `CHANGELOG.html` com Bootstrap 5.3 dark theme, abas bilíngues acessíveis ([PT-BR] e [EN-US]), skip link acessível, tabelas semânticas de atalhos e branding Tech Tales Entertainment.
+  - Remoção definitiva de `CHANGELOG.txt` e atualização das diretrizes de governança e workflows de CI/CD para utilizar exclusivamente `CHANGELOG.html`.
+
+### Testes
+- Adicionados testes unitários em `tests/test_timeline_store.py` validando a ordenação cronológica reversa independente da ordem de chegada e todas as faixas temporais da formatação relativa. Suíte expandida para 36 testes aprovados.
+
+---
+
 ## [0.1.0-dev.16] - 2026-10-16
 
 ### Adicionado
