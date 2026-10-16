@@ -44,6 +44,7 @@ jobs:
             --collect-all playwright `
             --add-data "sounds;sounds" `
             --add-data "README.html;." `
+            --add-data "CHANGELOG.html;." `
             --add-data "CHANGELOG.txt;." `
             --add-binary "src/audio/lib/x64/bass.dll;src/audio/lib/x64" `
             run.py
@@ -58,6 +59,7 @@ jobs:
         shell: powershell
         run: |
           Copy-Item -Path "README.html" -Destination "dist\AccessibleTimeline\README.html"
+          Copy-Item -Path "CHANGELOG.html" -Destination "dist\AccessibleTimeline\CHANGELOG.html"
           Copy-Item -Path "CHANGELOG.txt" -Destination "dist\AccessibleTimeline\CHANGELOG.txt"
           $tag = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "latest" }
           $zipName = "AccessibleTimeline-$tag-windows-x64.zip"

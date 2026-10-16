@@ -4,6 +4,7 @@ Módulo de verificação de atualizações do Accessible Timeline via GitHub Rel
 
 import json
 import logging
+import re
 import urllib.request
 from typing import Optional, Dict, Any
 from src.core.version import __version__, GITHUB_OWNER, GITHUB_REPO
@@ -12,14 +13,20 @@ logger = logging.getLogger("AccessibleTimeline.Updater")
 
 
 def parse_version_tuple(v_str: str) -> tuple:
-    """Converte strings como 'v0.2.0' ou '0.2.0' em tupla de inteiros (0, 2, 0)."""
+    """Converte strings como 'v0.2.0', '0.2.1A' ou 'v1.0.0-dev.1' em tupla comparável."""
     cleaned = v_str.lstrip("v").strip().split("-")[0]
     parts = []
     for p in cleaned.split("."):
-        try:
-            parts.append(int(p))
-        except ValueError:
-            parts.append(0)
+        m = re.match(r"^(\d+)([a-zA-Z]*)", p)
+        if m:
+            parts.append(int(m.group(1)))
+            if m.group(2):
+                parts.append(ord(m.group(2).upper()))
+        else:
+            try:
+                parts.append(int(p))
+            except ValueError:
+                parts.append(0)
     return tuple(parts)
 
 
