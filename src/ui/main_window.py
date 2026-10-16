@@ -90,6 +90,8 @@ class MainWindow(wx.Frame):
         item_details = timeline_menu.Append(wx.ID_ANY, "Ver &Detalhes da Publicação\tEnter", "Abre os detalhes da postagem selecionada")
         item_open_link = timeline_menu.Append(wx.ID_ANY, "Abrir &Link no Navegador\tCtrl+Enter", "Abre o link da postagem selecionada no navegador padrão")
         timeline_menu.AppendSeparator()
+        item_toggle_browser = timeline_menu.Append(wx.ID_ANY, "Alternar Janela do &Navegador (Login / Verificação)\tCtrl+Shift+B", "Exibe ou oculta a janela do navegador Chromium")
+        timeline_menu.AppendSeparator()
         item_exit = timeline_menu.Append(wx.ID_EXIT, "Sai&r\tAlt+F4", "Fecha o Accessible Timeline")
         menu_bar.Append(timeline_menu, "&Timeline")
 
@@ -136,6 +138,7 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_load_more, item_load_more)
         self.Bind(wx.EVT_MENU, self._on_open_details, item_details)
         self.Bind(wx.EVT_MENU, self._on_open_link, item_open_link)
+        self.Bind(wx.EVT_MENU, self._on_toggle_browser, item_toggle_browser)
         self.Bind(wx.EVT_MENU, self._on_new_post, item_new_post)
         self.Bind(wx.EVT_MENU, self._on_reply, item_reply)
         self.Bind(wx.EVT_MENU, self._on_retweet, item_retweet)
@@ -625,6 +628,10 @@ class MainWindow(wx.Frame):
         self.status_bar.SetStatusText("Carregando mais postagens...")
         self.reader.load_more()
 
+    def _on_toggle_browser(self, event=None):
+        """Alterna a visibilidade da janela do navegador Chromium."""
+        self.reader.toggle_browser_window()
+
     def _on_about(self, event):
         info = (
             f"Accessible Timeline v{__version__}\n\n"
@@ -637,6 +644,7 @@ class MainWindow(wx.Frame):
             "- Control + Windows + Setas: Alternar rapidamente entre os fluxos.\n"
             "- Enter: Abrir detalhes completos da postagem.\n"
             "- Control + Enter: Abrir link no navegador padrão (com diálogo de seleção para múltiplos links).\n"
+            "- Ctrl + Shift + B: Alternar exibição da janela do navegador (para fazer login ou resolver verificações).\n"
             "- F5: Atualizar o fluxo ativo.\n"
             "- Ctrl+M: Carregar mais postagens.\n\n"
             "Comandos e Ações (Menu Ações ou Atalhos Rápidos):\n"

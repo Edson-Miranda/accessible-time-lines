@@ -41,6 +41,7 @@ jobs:
       - name: Build Executable with PyInstaller
         run: |
           pyinstaller --noconfirm --onedir --windowed --name "AccessibleTimeline" `
+            --collect-all playwright `
             --add-data "sounds;sounds" `
             --add-data "README.html;." `
             --add-data "CHANGELOG.txt;." `

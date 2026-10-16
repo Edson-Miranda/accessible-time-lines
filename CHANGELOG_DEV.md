@@ -1,3 +1,22 @@
+## [0.1.0-dev.11] - 2026-10-16
+
+### Corrigido
+- **Resiliência e Fallback de Inicialização do Navegador (`src/platforms/x_twitter/browser.py`)**:
+  - Implementado mecanismo de inicialização em cascata (`_launch_persistent_context_with_fallback`):
+    1. Microsoft Edge do sistema operacional (`channel="msedge"`), presente nativamente em 100% dos Windows 10 e 11.
+    2. Google Chrome (`channel="chrome"`).
+    3. Chromium do Playwright (`channel=None`).
+    4. Auto-instalação automática via `playwright install chromium` com notificação informativa na barra de status se nenhum navegador estiver instalado.
+  - Elimina erros de navegador ausente em máquinas de usuários que não possuem o Playwright previamente configurado via terminal.
+- **Empacotamento Completo do Driver do Playwright (`.github/workflows/build-release.yml`)**:
+  - Adicionada flag `--collect-all playwright` na compilação do PyInstaller para embutir integralmente o executável `node.exe` e os drivers internos de comunicação do Playwright no executável final.
+- **Alternância Dinâmica da Janela do Navegador (`src/ui/main_window.py`, `src/platforms/x_twitter/reader.py`, `src/platforms/x_twitter/browser.py`)**:
+  - Adicionada opção no menu **Timeline**: "Alternar Janela do Navegador (Login / Verificação)" com atalho `Ctrl + Shift + B`.
+  - Permite ao usuário exibir a janela do navegador a qualquer momento caso precise realizar login manual, resolver verificações, 2FA ou alternar contas, e ocultá-la novamente para retornar ao modo 100% acessível.
+  - Documentação atualizada no diálogo "Sobre" e no manual acessível [`README.html`](file:///c:/Users/edson/Documents/accessible%20timeline/README.html).
+
+---
+
 ## [0.1.0-dev.10] - 2026-10-16
 
 ### Adicionado
