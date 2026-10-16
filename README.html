@@ -1,338 +1,502 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
+<!doctype html>
+<html lang="pt-BR" data-bs-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Accessible Timeline - Manual e Guia de Uso / User Guide</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Manual de instruções e guia de uso oficial e acessível do Accessible Timeline, cliente inclusivo para redes sociais da Tech Tales Entertainment.">
+  <meta name="author" content="Tech Tales Entertainment">
+  <title>Accessible Timeline — Manual e Guia de Uso / User Guide</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+
   <style>
+    :root {
+      --at-accent: #8a6df1;
+      --at-accent-rgb: 138, 109, 241;
+      --at-surface: rgba(255, 255, 255, 0.045);
+      --at-border: rgba(255, 255, 255, 0.12);
+    }
+
+    html { scroll-behavior: smooth; }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      line-height: 1.6;
-      color: #1a1a1a;
-      background-color: #fbfbfb;
-      margin: 0;
-      padding: 20px;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 15% 10%, rgba(var(--at-accent-rgb), .20), transparent 28rem),
+        radial-gradient(circle at 85% 15%, rgba(13, 202, 240, .12), transparent 25rem),
+        #090b12;
     }
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      background: #ffffff;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+
+    .skip-link {
+      position: absolute;
+      top: -5rem;
+      left: 1rem;
+      z-index: 1100;
     }
-    h1, h2, h3 {
-      color: #0d47a1;
+    .skip-link:focus { top: 1rem; }
+
+    .hero {
+      border-bottom: 1px solid var(--at-border);
+      background: rgba(9, 11, 18, .72);
+      backdrop-filter: blur(12px);
     }
-    h1 {
-      border-bottom: 2px solid #0d47a1;
-      padding-bottom: 10px;
+
+    .brand-mark {
+      width: 3rem;
+      height: 3rem;
+      display: inline-grid;
+      place-items: center;
+      border: 1px solid rgba(var(--at-accent-rgb), .65);
+      border-radius: 1rem;
+      background: rgba(var(--at-accent-rgb), .15);
+      font-weight: 800;
+      letter-spacing: .04em;
     }
-    h2 {
-      margin-top: 30px;
-      border-bottom: 1px solid #e0e0e0;
-      padding-bottom: 6px;
+
+    .readme-shell {
+      max-width: 1024px;
+      margin-inline: auto;
     }
-    .lang-nav {
-      background: #e3f2fd;
-      padding: 12px 18px;
-      border-radius: 6px;
-      margin-bottom: 25px;
-      font-weight: bold;
+
+    .language-tabs {
+      position: sticky;
+      top: 0;
+      z-index: 1020;
+      padding-top: .75rem;
+      background: linear-gradient(#090b12 70%, transparent);
     }
-    .lang-nav a {
-      color: #0d47a1;
-      text-decoration: underline;
-      margin-right: 20px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 20px 0;
-    }
-    th, td {
-      border: 1px solid #cccccc;
-      padding: 10px 14px;
-      text-align: left;
-    }
-    th {
-      background-color: #f0f4f8;
-      color: #0d47a1;
-    }
-    code, kbd {
-      background: #eee;
-      border: 1px solid #ccc;
-      border-radius: 3px;
-      padding: 2px 6px;
-      font-size: 0.95em;
-      font-family: Consolas, monospace;
-    }
-    hr {
-      margin: 40px 0;
+
+    .nav-tabs { border-bottom-color: var(--at-border); }
+    .nav-tabs .nav-link {
+      color: var(--bs-secondary-color);
       border: 0;
-      border-top: 2px solid #e0e0e0;
+      border-bottom: 3px solid transparent;
+      border-radius: .65rem .65rem 0 0;
+      padding: .85rem 1.25rem;
+      font-weight: 650;
+    }
+    .nav-tabs .nav-link:hover { color: var(--bs-body-color); }
+    .nav-tabs .nav-link.active {
+      color: #fff;
+      background: rgba(var(--at-accent-rgb), .14);
+      border-bottom-color: var(--at-accent);
+    }
+
+    .language-panel > main {
+      padding: clamp(1.25rem, 3vw, 2.5rem);
+      border: 1px solid var(--at-border);
+      border-radius: 0 0 1.25rem 1.25rem;
+      background: var(--at-surface);
+      box-shadow: 0 1rem 4rem rgba(0, 0, 0, .25);
+    }
+
+    .language-panel h1 {
+      font-size: clamp(2.1rem, 6vw, 3.5rem);
+      font-weight: 800;
+      letter-spacing: -.045em;
+    }
+
+    .language-panel h2 {
+      margin-top: 2.5rem;
+      padding-bottom: .55rem;
+      border-bottom: 1px solid var(--at-border);
+      font-size: clamp(1.35rem, 3vw, 1.8rem);
+      font-weight: 750;
+    }
+
+    .language-panel p, .language-panel li { line-height: 1.75; }
+    .language-panel li + li { margin-top: .35rem; }
+
+    .language-panel .meta {
+      margin-bottom: 2rem;
+      color: var(--bs-secondary-color);
+      font-size: 1.05rem;
+    }
+
+    .language-panel section { scroll-margin-top: 7rem; }
+
+    .language-panel .note {
+      margin-top: 2.5rem;
+      padding: 1.25rem 1.35rem;
+      border: 1px solid rgba(var(--at-accent-rgb), .45);
+      border-left: .35rem solid var(--at-accent);
+      border-radius: .8rem;
+      background: rgba(var(--at-accent-rgb), .10);
+    }
+    .language-panel .note h2 { margin-top: 0; }
+
+    kbd {
+      border: 1px solid rgba(255,255,255,.28);
+      border-bottom-width: 2px;
+      border-radius: .35rem;
+      padding: .12rem .4rem;
+      background: #171a24;
+      color: #f8f9fa;
+      box-shadow: none;
+      font-family: var(--bs-font-monospace);
+      white-space: nowrap;
+    }
+
+    a { text-underline-offset: .2em; }
+
+    footer { color: var(--bs-secondary-color); }
+
+    .table-accessible {
+      width: 100%;
+      margin: 1.5rem 0;
+      border-collapse: separate;
+      border-spacing: 0;
+      border: 1px solid var(--at-border);
+      border-radius: .75rem;
+      overflow: hidden;
+    }
+
+    .table-accessible th, .table-accessible td {
+      padding: .85rem 1rem;
+      border-bottom: 1px solid var(--at-border);
+      border-right: 1px solid var(--at-border);
+    }
+
+    .table-accessible th:last-child, .table-accessible td:last-child {
+      border-right: 0;
+    }
+
+    .table-accessible tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .table-accessible th {
+      background: rgba(var(--at-accent-rgb), .18);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .table-accessible td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
     }
   </style>
 </head>
 <body>
-  <div class="container" role="main">
-    <nav class="lang-nav" aria-label="Seleção de idioma / Language selection">
-      <span>Idiomas / Languages:</span>
-      <a href="#pt-br">Versão em Português</a>
-      <a href="#en-us">English Version</a>
+  <a class="btn btn-primary skip-link" href="#language-content">Pular para o conteúdo / Skip to content</a>
+
+  <header class="hero py-4 py-lg-5">
+    <div class="container readme-shell">
+      <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-3">
+        <div class="brand-mark" aria-hidden="true">AT</div>
+        <div>
+          <p class="text-uppercase small fw-semibold text-info mb-1">Tech Tales Entertainment</p>
+          <h1 class="display-6 fw-bold mb-1">Accessible Timeline</h1>
+          <p class="lead text-body-secondary mb-0">Manual do Usuário e Guia Acessível / User Guide</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container readme-shell py-4 py-lg-5" id="language-content">
+    <nav class="language-tabs" aria-label="Seleção de idioma / Language selection">
+      <ul class="nav nav-tabs" id="languageTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="pt-tab" data-bs-toggle="tab" data-bs-target="#pt-pane" type="button" role="tab" aria-controls="pt-pane" aria-selected="true" lang="pt-BR">Português</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="en-tab" data-bs-toggle="tab" data-bs-target="#en-pane" type="button" role="tab" aria-controls="en-pane" aria-selected="false" lang="en">English</button>
+        </li>
+      </ul>
     </nav>
 
-    <!-- ==================== SEÇÃO PORTUGUÊS ==================== -->
-    <article id="pt-br" lang="pt-BR">
-      <header>
-        <h1>Accessible Timeline - Cliente Acessível para X (Twitter)</h1>
-        <p><strong>Desenvolvido por:</strong> <a href="https://techtales.com.br" target="_blank">TechTales Entertainment</a> | <strong>Versão:</strong> 0.2.1 | <strong>Público-alvo:</strong> Pessoas com deficiência visual e usuários de leitores de tela (NVDA e JAWS).</p>
-      </header>
+    <div class="tab-content" id="languageTabContent">
+      <!-- PAINEL EM PORTUGUÊS -->
+      <div class="tab-pane fade show active language-panel" id="pt-pane" role="tabpanel" aria-labelledby="pt-tab" tabindex="0" lang="pt-BR">
+        <main>
 
-      <section>
-        <h2>Sobre o Projeto</h2>
-        <p>O <strong>Accessible Timeline</strong> é um cliente desenvolvido pela <strong>TechTales Entertainment</strong> concebido especificamente para oferecer navegação rápida, linear, desobstruída e 100% operável por teclado, eliminando o atrito das interfaces web modernas. Inspirado no legado consagrado de clientes como <strong>TWBlue</strong> e <strong>The Qube</strong>, o projeto prioriza controles nativos do Windows para uma experiência de fala limpa e sem redundâncias nos leitores de tela.</p>
-        <p>Visite nosso site oficial: <a href="https://techtales.com.br" target="_blank">https://techtales.com.br</a></p>
-      </section>
+<h1>Accessible Timeline</h1>
+<p class="meta">Cliente inclusivo de redes sociais produzido por <strong>Tech Tales Entertainment</strong>.<br/>
+Site oficial: <a href="https://www.techtales.com.br" target="_blank" rel="noopener noreferrer">https://www.techtales.com.br</a></p>
 
-      <section>
-        <h2>Novidades da Versão 0.2.1</h2>
-        <ul>
-          <li><strong>Isolamento Total com Chromium Embutido:</strong> O pacote do aplicativo agora inclui seu próprio motor Chromium portátil embutido dentro da pasta <code>browsers/</code>, com <strong>zero uso e zero dependência</strong> dos navegadores instalados no seu computador (Edge/Chrome). Seus perfis pessoais de navegação nunca são tocados.</li>
-          <li><strong>Correção de Abertura do Navegador para Login:</strong> Solucionado o problema onde o navegador não abria para login inicial em máquinas sem ambiente de desenvolvimento instalado. O login agora funciona de forma automática e independente.</li>
-          <li><strong>Alternância da Janela do Navegador (<kbd>Ctrl + Shift + B</kbd>):</strong> Opção no menu <em>Timeline</em> e atalho rápido para exibir ou ocultar a janela do navegador quando necessário.</li>
-          <li><strong>Verificação Automática de Atualizações:</strong> O aplicativo agora verifica silenciosamente na inicialização se há novas versões disponíveis no GitHub.</li>
-          <li><strong>Janela de Configurações (<kbd>Ctrl + P</kbd>):</strong> Opção no menu <em>Opções</em> para personalizar e ligar/desligar a checagem automática de atualizações ao iniciar, além de manter preferências de áudio salvas.</li>
-          <li><strong>Documentação e Histórico Acessíveis em HTML:</strong> Disponibilização tanto do <code>README.html</code> quanto do <code>CHANGELOG.html</code> bilíngues e otimizados para leitores de tela.</li>
-        </ul>
-      </section>
+<section>
+<h2>Visão Geral</h2>
+<p>O <strong>Accessible Timeline</strong> é um cliente moderno concebido especificamente para pessoas com deficiência visual e usuários de leitores de tela como <strong>NVDA</strong> e <strong>JAWS</strong>.</p>
+<p>Inspirado no consagrado legado de clientes como <strong>TWBlue</strong> e <strong>The Qube</strong>, o aplicativo prioriza controles nativos do Windows (<kbd>SysTreeView32</kbd> e <kbd>SysListView32</kbd>), garantindo navegação veloz, 100% operável por teclado, sem eco ou duplicação de fala e sem os atritos das interfaces web complexas.</p>
+</section>
 
-      <section>
-        <h2>Novidades da Versão 0.2.0</h2>
-        <ul>
-          <li><strong>Efeitos Sonoros do TWBlue:</strong> Sons clássicos para ações de envio, recebimento, curtidas, mensagens diretas, limites de texto e erros, com motor de áudio BASS de baixa latência.</li>
-          <li><strong>6 Temas Sonoros Disponíveis:</strong> Padrão (TWBlue), Clássico, Qwitter, Magical Fountain, FreakyBlue e FightingGames (Menu Áudio ou atalho <code>Ctrl+Shift+S</code>).</li>
-          <li><strong>Interações Completas no X:</strong> Nova postagem (<code>Ctrl+N</code>), responder (<code>Ctrl+R</code>), repostar e citar (<code>Ctrl+Shift+R</code> / <code>Ctrl+Shift+C</code>), curtir/descurtir (<code>Ctrl+L</code> ou tecla <code>L</code>) e mensagens diretas (<code>Ctrl+D</code>).</li>
-          <li><strong>Layout em Árvore Clássico:</strong> Navegação entre fluxos ("Para você", "Seguindo", "Menções" e "Mensagens diretas") via <code>Tab</code>, <code>Shift+Tab</code> e <code>Ctrl+Win+Setas</code>.</li>
-          <li><strong>Leitura Completa nas Setas:</strong> Leitura integral de cada tweet com as setas para Cima e Baixo, sem truncamento.</li>
-          <li><strong>Abertura Rápida de Links:</strong> <code>Control+Enter</code> abre links no navegador padrão, com diálogo de seleção para posts com múltiplos links.</li>
-          <li><strong>Navegador em Modo Invisível:</strong> Operação silenciosa em segundo plano após autenticação e pré-carregamento automático de todas as guias.</li>
-        </ul>
-      </section>
+<section>
+<h2>Recursos Principais</h2>
+<ul>
+<li><strong>Árvore de Fluxos Clássica</strong>: Navegue com agilidade entre as seções <em>Para você</em>, <em>Seguindo</em>, <em>Menções (Notificações)</em> e <em>Mensagens diretas</em>.</li>
+<li><strong>Leitura Linear em Ordem Cronológica Reversa</strong>: As publicações mais recentes aparecem no topo da lista com cálculo de tempo relativo no estilo TWBlue (ex.: <em>2 horas atrás</em>, <em>3 semanas atrás</em>).</li>
+<li><strong>Composição Completa de Conteúdo</strong>: Crie novas publicações com <kbd>Ctrl+N</kbd>, responda a postagens com <kbd>Ctrl+R</kbd>, reposte ou cite com <kbd>Ctrl+Shift+R</kbd> e envie DMs com <kbd>Ctrl+D</kbd>.</li>
+<li><strong>Interação Imediata</strong>: Curta publicações com <kbd>Ctrl+L</kbd> com resposta sonora instantânea.</li>
+<li><strong>Leitura Detalhada e Links</strong>: Abra os detalhes da publicação com <kbd>Enter</kbd> e acesse links externos com <kbd>Ctrl+O</kbd>.</li>
+<li><strong>Download e Atualizações Automáticas In-Place</strong>: O aplicativo verifica atualizações ao iniciar e baixa e instala novos pacotes automaticamente no programa.</li>
+<li><strong>Navegador Embutido Isolado</strong>: Motor Chromium dedicado em segundo plano que preserva seus cookies e sessão sem abrir janelas desnecessárias.</li>
+</ul>
+</section>
 
-      <section>
-        <h2>Tabela de Atalhos de Teclado</h2>
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Atalho / Tecla</th>
-              <th scope="col">Função</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><kbd>Tab</kbd> / <kbd>Shift + Tab</kbd></td>
-              <td>Alterna entre a Árvore de fluxos (esquerda) e a Lista de postagens (direita)</td>
-            </tr>
-            <tr>
-              <td><kbd>Setas Cima / Baixo</kbd> (na Árvore)</td>
-              <td>Percorre os fluxos disponíveis (Para você, Seguindo, Menções, Mensagens diretas)</td>
-            </tr>
-            <tr>
-              <td><kbd>Setas Cima / Baixo</kbd> (na Lista)</td>
-              <td>Lê as publicações do fluxo ativo (o NVDA/JAWS lê o texto completo)</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + Win + Setas</kbd></td>
-              <td>Alterna instantaneamente de fluxo em qualquer parte do aplicativo</td>
-            </tr>
-            <tr>
-              <td><kbd>Enter</kbd></td>
-              <td>Abre a tela com o conteúdo detalhado da publicação para leitura linha por linha</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + Enter</kbd></td>
-              <td>Abre o link da publicação no navegador padrão (com diálogo se houver mais de um)</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + Shift + B</kbd></td>
-              <td>Alterna a exibição da janela do navegador (para fazer login ou resolver verificações)</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + N</kbd></td>
-              <td>Nova publicação com contador regressivo de caracteres</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + R</kbd></td>
-              <td>Responder à publicação selecionada</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + Shift + R</kbd></td>
-              <td>Repostar diretamente ou abrir citação com comentário</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + Shift + C</kbd></td>
-              <td>Repostar com comentário (Citar publicação)</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + L</kbd> ou <kbd>L</kbd></td>
-              <td>Curtir ou remover curtida da publicação selecionada</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + D</kbd></td>
-              <td>Enviar mensagem direta (DM) para o autor da publicação</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + Shift + S</kbd></td>
-              <td>Ativar ou desativar efeitos sonoros</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + P</kbd></td>
-              <td>Abrir as Configurações do aplicativo (ativar ou desativar verificação automática de atualizações)</td>
-            </tr>
-            <tr>
-              <td><kbd>F5</kbd></td>
-              <td>Atualizar o fluxo ativo</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + M</kbd></td>
-              <td>Carregar mais postagens (rolar fluxo)</td>
-            </tr>
-            <tr>
-              <td><kbd>Alt + F4</kbd></td>
-              <td>Fechar o aplicativo</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-    </article>
+<section>
+<h2>Tabela Completa de Atalhos de Teclado</h2>
+<p>Todos os recursos do Accessible Timeline foram desenvolvidos para operação integral por teclado:</p>
 
-    <hr>
+<table class="table-accessible" role="table" aria-label="Tabela de atalhos de teclado do Accessible Timeline">
+  <thead>
+    <tr>
+      <th scope="col">Atalho / Tecla</th>
+      <th scope="col">Ação</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><kbd>Tab</kbd> / <kbd>Shift+Tab</kbd></td>
+      <td>Alterna o foco entre a <strong>Árvore de Fluxos</strong> (esquerda) e a <strong>Lista de Publicações</strong> (direita)</td>
+    </tr>
+    <tr>
+      <td><kbd>Setas Cima</kbd> / <kbd>Baixo</kbd> (na Árvore)</td>
+      <td>Navega entre as seções: Para você, Seguindo, Menções e Mensagens diretas</td>
+    </tr>
+    <tr>
+      <td><kbd>Setas Direita</kbd> / <kbd>Esquerda</kbd> (na Árvore)</td>
+      <td>Expande ou recolhe o nó principal da conta</td>
+    </tr>
+    <tr>
+      <td><kbd>Ctrl+Win+Seta Cima</kbd> / <kbd>Baixo</kbd></td>
+      <td>Alterna entre os fluxos de qualquer lugar do aplicativo</td>
+    </tr>
+    <tr>
+      <td><kbd>Setas Cima</kbd> / <kbd>Baixo</kbd> (na Lista)</td>
+      <td>Navega entre as publicações do fluxo ativo</td>
+    </tr>
+    <tr>
+      <td><kbd>Enter</kbd> (na Lista)</td>
+      <td>Abre a visualização detalhada da publicação selecionada</td>
+    </tr>
+    <tr>
+      <td><kbd>Ctrl+N</kbd></td>
+      <td>Compor e publicar um novo tweet</td>
+    </tr>
+    <tr>
+      <td><kbd>Ctrl+R</kbd></td>
+      <td>Responder à publicação selecionada</td>
+    </tr>
+    <tr>
+      <td><kbd>Ctrl+Shift+R</kbd></td>
+      <td>Abre opções para repostar diretamente ou citar com comentário</td>
+    </tr>
+    <tr>
+      <td><kbd>Ctrl+L</kbd></td>
+      <td>Curtir a publicação selecionada</td>
+    </tr>
+    <tr>
+      <td><kbd>Ctrl+D</kbd></td>
+      <td>Enviar mensagem direta (DM)</td>
+    </tr>
+    <tr>
+      <td><kbd>Ctrl+O</kbd></td>
+      <td>Abrir links contidos na publicação</td>
+    </tr>
+    <tr>
+      <td><kbd>Ctrl+P</kbd></td>
+      <td>Abrir configurações do aplicativo (verificação automática, etc.)</td>
+    </tr>
+    <tr>
+      <td><kbd>F5</kbd></td>
+      <td>Recarrega e atualiza o fluxo ativo</td>
+    </tr>
+    <tr>
+      <td><kbd>Ctrl+M</kbd></td>
+      <td>Carrega publicações mais antigas (rola a timeline)</td>
+    </tr>
+    <tr>
+      <td><kbd>F12</kbd></td>
+      <td>Exibe ou oculta a janela do navegador embutido para login manual</td>
+    </tr>
+    <tr>
+      <td><kbd>Alt+F4</kbd></td>
+      <td>Encerra o aplicativo de forma limpa</td>
+    </tr>
+  </tbody>
+</table>
+</section>
 
-    <!-- ==================== SEÇÃO EM INGLÊS ==================== -->
-    <article id="en-us" lang="en-US">
-      <header>
-        <h1>Accessible Timeline - Accessible Client for X (Twitter)</h1>
-        <p><strong>Developed by:</strong> <a href="https://techtales.com.br" target="_blank">TechTales Entertainment</a> | <strong>Version:</strong> 0.2.1 | <strong>Audience:</strong> Blind and visually impaired users navigating with NVDA, JAWS, or other screen readers.</p>
-      </header>
+<section>
+<h2>Primeiro Acesso e Login no X</h2>
+<p>Se você estiver executando o programa pela primeira vez, uma janela do navegador será exibida para que você faça login em sua conta do X com suas credenciais e verificação em duas etapas (2FA).</p>
+<p>Assim que o login for detectado, o navegador será automaticamente ocultado e passará a funcionar em segundo plano de forma silenciosa, sem interferir no seu leitor de telas.</p>
+</section>
 
-      <section>
-        <h2>About the Project</h2>
-        <p><strong>Accessible Timeline</strong> is developed by <strong>TechTales Entertainment</strong> and designed specifically to bring back the fast, clean, and linear social media experience inspired by classical tools like <strong>TWBlue</strong> and <strong>The Qube</strong>. It operates using native Windows controls (Win32), ensuring responsive keyboard interactions, clean screen reader speech without echo or interruptions, and zero web interface friction.</p>
-        <p>Official website: <a href="https://techtales.com.br" target="_blank">https://techtales.com.br</a></p>
-      </section>
+<section class="note">
+<h2>Desenvolvimento e Suporte</h2>
+<p>O <strong>Accessible Timeline</strong> é desenvolvido com dedicação por <strong>Tech Tales Entertainment</strong>.<br/>
+Dúvidas, sugestões e suporte: <a href="https://www.techtales.com.br" target="_blank" rel="noopener noreferrer">https://www.techtales.com.br</a></p>
+</section>
 
-      <section>
-        <h2>What's New in Version 0.2.1</h2>
-        <ul>
-          <li><strong>Complete Isolation with Dedicated Embedded Chromium:</strong> The package bundles its own portable Chromium engine inside <code>browsers/</code> with <strong>zero usage and zero dependency</strong> on personal browsers installed on your system (Edge/Chrome). Your personal profiles, history, and passwords are never touched.</li>
-          <li><strong>Reliable Browser Login Launch:</strong> Resolved the issue where the browser window failed to launch for login on machines lacking developer tools. The bundled Chromium runs out of the box with zero external configuration required.</li>
-          <li><strong>Browser Window Toggle Shortcut (<kbd>Ctrl + Shift + B</kbd>):</strong> Easy access under the <em>Timeline</em> menu and keyboard shortcut to toggle browser visibility for security checks, 2FA, or account switching.</li>
-          <li><strong>Automatic Background Update Check:</strong> The client now automatically checks for newer GitHub releases upon startup in the background.</li>
-          <li><strong>Settings Dialog (<kbd>Ctrl + P</kbd>):</strong> New option under the <em>Options</em> menu to configure and toggle automatic startup update checks and keep audio preferences saved across restarts.</li>
-          <li><strong>Accessible Bilingual HTML Documentation & Changelog:</strong> Both <code>README.html</code> and <code>CHANGELOG.html</code> are provided with screen reader-friendly HTML navigation in Portuguese and English.</li>
-        </ul>
-      </section>
+        </main>
+      </div>
 
-      <section>
-        <h2>What's New in Version 0.2.0</h2>
-        <ul>
-          <li><strong>Classic TWBlue Sound Packs:</strong> Low-latency audio powered by the BASS library for actions (tweets, replies, retweets, likes, DMs, incoming updates, character limit alerts, and errors).</li>
-          <li><strong>6 Audio Themes Included:</strong> Default (TWBlue), Classic, Qwitter, Magical Fountain, FreakyBlue, and FightingGames (toggle via Audio menu or <code>Ctrl+Shift+S</code>).</li>
-          <li><strong>Complete Interactive Actions:</strong> New tweet (<code>Ctrl+N</code>), reply (<code>Ctrl+R</code>), retweet & quote (<code>Ctrl+Shift+R</code> / <code>Ctrl+Shift+C</code>), like/unlike (<code>Ctrl+L</code> or key <code>L</code>), and direct messages (<code>Ctrl+D</code>).</li>
-          <li><strong>Classic TreeView Layout:</strong> Seamless navigation between streams ("For you", "Following", "Mentions", and "Direct Messages") via <code>Tab</code>, <code>Shift+Tab</code>, and <code>Ctrl+Win+Arrows</code>.</li>
-          <li><strong>Full Post Reading on Arrows:</strong> Listen to the entire tweet simply by browsing with Up and Down arrow keys without text truncation.</li>
-          <li><strong>Fast Link Opening:</strong> Press <code>Control+Enter</code> to open post URLs in your default browser, featuring a combo box dialog when multiple links are present.</li>
-          <li><strong>Silent Background Browser:</strong> Headless execution after authentication with automatic background preloading for all tabs.</li>
-        </ul>
-      </section>
+      <!-- PAINEL EM INGLÊS -->
+      <div class="tab-pane fade language-panel" id="en-pane" role="tabpanel" aria-labelledby="en-tab" tabindex="0" lang="en">
+        <main>
 
-      <section>
-        <h2>Keyboard Shortcuts Guide</h2>
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Shortcut / Key</th>
-              <th scope="col">Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><kbd>Tab</kbd> / <kbd>Shift + Tab</kbd></td>
-              <td>Switch keyboard focus between the Streams Tree (left) and Post List (right)</td>
-            </tr>
-            <tr>
-              <td><kbd>Up / Down Arrows</kbd> (in Tree)</td>
-              <td>Browse through available streams (For you, Following, Mentions, Direct Messages)</td>
-            </tr>
-            <tr>
-              <td><kbd>Up / Down Arrows</kbd> (in List)</td>
-              <td>Read posts in the active stream (screen reader speaks full text)</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + Win + Arrows</kbd></td>
-              <td>Instantly switch streams from anywhere in the application</td>
-            </tr>
-            <tr>
-              <td><kbd>Enter</kbd></td>
-              <td>Open detailed post dialog for character-by-character or line-by-line inspection</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + Enter</kbd></td>
-              <td>Open links from selected post in default browser (with chooser dialog for multiple links)</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + Shift + B</kbd></td>
-              <td>Toggle browser window visibility (for login or account verification)</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + N</kbd></td>
-              <td>Compose a new post with live character countdown</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + R</kbd></td>
-              <td>Reply to the selected post</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + Shift + R</kbd></td>
-              <td>Retweet directly or open quote dialog</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + Shift + C</kbd></td>
-              <td>Quote post with comment</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + L</kbd> or <kbd>L</kbd></td>
-              <td>Like or unlike the selected post</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + D</kbd></td>
-              <td>Send Direct Message (DM) to the author</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + Shift + S</kbd></td>
-              <td>Mute or unmute sound effects</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + P</kbd></td>
-              <td>Open Application Settings (enable or disable automatic update check on startup)</td>
-            </tr>
-            <tr>
-              <td><kbd>F5</kbd></td>
-              <td>Refresh current active stream</td>
-            </tr>
-            <tr>
-              <td><kbd>Ctrl + M</kbd></td>
-              <td>Load more posts (scroll stream)</td>
-            </tr>
-            <tr>
-              <td><kbd>Alt + F4</kbd></td>
-              <td>Exit application</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-    </article>
+<h1>Accessible Timeline</h1>
+<p class="meta">An inclusive social media client produced by <strong>Tech Tales Entertainment</strong>.<br/>
+Official website: <a href="https://www.techtales.com.br" target="_blank" rel="noopener noreferrer">https://www.techtales.com.br</a></p>
+
+<section>
+<h2>Overview</h2>
+<p><strong>Accessible Timeline</strong> is a modern client built specifically for blind, visually impaired individuals, and screen reader users using <strong>NVDA</strong> and <strong>JAWS</strong>.</p>
+<p>Inspired by the rich heritage of classic tools like <strong>TWBlue</strong> and <strong>The Qube</strong>, the app puts native Windows controls (<kbd>SysTreeView32</kbd> and <kbd>SysListView32</kbd>) front and center. This ensures fast, keyboard-first navigation with clean, predictable speech output and zero web clutter.</p>
+</section>
+
+<section>
+<h2>Key Features</h2>
+<ul>
+<li><strong>Classic Stream Tree</strong>: Quickly toggle between <em>For You</em>, <em>Following</em>, <em>Mentions (Notifications)</em>, and <em>Direct Messages</em>.</li>
+<li><strong>Reverse-Chronological Timeline</strong>: Recent posts appear at the top with TWBlue-style relative timestamps (e.g. <em>2 hours ago</em>, <em>3 weeks ago</em>).</li>
+<li><strong>Full Authoring Suite</strong>: Compose new posts with <kbd>Ctrl+N</kbd>, reply with <kbd>Ctrl+R</kbd>, repost or quote with <kbd>Ctrl+Shift+R</kbd>, and send DMs with <kbd>Ctrl+D</kbd>.</li>
+<li><strong>Quick Actions</strong>: Like posts instantly with <kbd>Ctrl+L</kbd> and real-time audio confirmation.</li>
+<li><strong>Full Post Inspector & Links</strong>: Read complete posts with <kbd>Enter</kbd> and open attached links with <kbd>Ctrl+O</kbd>.</li>
+<li><strong>In-Place Auto-Updater</strong>: Checks for releases on startup, downloads packages in-app, and replaces files automatically.</li>
+<li><strong>Embedded Isolated Browser</strong>: Dedicated background Chromium engine keeping your credentials and cookies completely private.</li>
+</ul>
+</section>
+
+<section>
+<h2>Keyboard Shortcuts Reference</h2>
+<p>Every feature in Accessible Timeline is 100% accessible via keyboard:</p>
+
+<table class="table-accessible" role="table" aria-label="Accessible Timeline Keyboard Shortcuts Table">
+  <thead>
+    <tr>
+      <th scope="col">Shortcut / Key</th>
+      <th scope="col">Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><kbd>Tab</kbd> / <kbd>Shift+Tab</kbd></td>
+      <td>Switch focus between the <strong>Streams Tree</strong> (left) and <strong>Posts List</strong> (right)</td>
+    </tr>
+    <tr>
+      <td><kbd>Up</kbd> / <kbd>Down Arrows</kbd> (in Tree)</td>
+      <td>Navigate streams: For you, Following, Mentions, and Direct messages</td>
+    </tr>
+    <tr>
+      <td><kbd>Right</kbd> / <kbd>Left Arrows</kbd> (in Tree)</td>
+      <td>Expand or collapse the account root node</td>
+    </tr>
+    <tr>
+      <td><kbd>Ctrl+Win+Up</kbd> / <kbd>Down Arrows</kbd></td>
+      <td>Switch streams from anywhere in the application</td>
+    </tr>
+    <tr>
+      <td><kbd>Up</kbd> / <kbd>Down Arrows</kbd> (in List)</td>
+      <td>Browse posts in the currently active stream</td>
+    </tr>
+    <tr>
+      <td><kbd>Enter</kbd> (in List)</td>
+      <td>Open the detailed post view dialog</td>
+    </tr>
+    <tr>
+      <td><kbd>Ctrl+N</kbd></td>
+      <td>Compose and post a new tweet</td>
+    </tr>
+    <tr>
+      <td><kbd>Ctrl+R</kbd></td>
+      <td>Reply to the selected post</td>
+    </tr>
+    <tr>
+      <td><kbd>Ctrl+Shift+R</kbd></td>
+      <td>Choose between simple repost or quote tweet</td>
+    </tr>
+    <tr>
+      <td><kbd>Ctrl+L</kbd></td>
+      <td>Like the selected post</td>
+    </tr>
+    <tr>
+      <td><kbd>Ctrl+D</kbd></td>
+      <td>Send a direct message (DM)</td>
+    </tr>
+    <tr>
+      <td><kbd>Ctrl+O</kbd></td>
+      <td>Open links attached to the post</td>
+    </tr>
+    <tr>
+      <td><kbd>Ctrl+P</kbd></td>
+      <td>Open Settings (automatic updates toggle, etc.)</td>
+    </tr>
+    <tr>
+      <td><kbd>F5</kbd></td>
+      <td>Refresh the current stream</td>
+    </tr>
+    <tr>
+      <td><kbd>Ctrl+M</kbd></td>
+      <td>Load older posts (scroll down)</td>
+    </tr>
+    <tr>
+      <td><kbd>F12</kbd></td>
+      <td>Toggle embedded browser window for manual login</td>
+    </tr>
+    <tr>
+      <td><kbd>Alt+F4</kbd></td>
+      <td>Exit the application cleanly</td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<section>
+<h2>First Run and Login on X</h2>
+<p>When running for the first time, the embedded browser window will automatically appear so you can log into your account using your credentials and 2-factor authentication (2FA).</p>
+<p>Once login is confirmed, the browser automatically switches into hidden headless mode and operates silently in the background.</p>
+</section>
+
+<section class="note">
+<h2>Development and Support</h2>
+<p><strong>Accessible Timeline</strong> is developed by <strong>Tech Tales Entertainment</strong>.<br/>
+Visit our official website for updates and support: <a href="https://www.techtales.com.br" target="_blank" rel="noopener noreferrer">https://www.techtales.com.br</a></p>
+</section>
+
+        </main>
+      </div>
+    </div>
   </div>
+
+  <footer class="container readme-shell pb-5 text-center small">
+    <p class="mb-1">Accessible Timeline — Tech Tales Entertainment</p>
+    <p class="mb-0"><a href="https://www.techtales.com.br" target="_blank" rel="noopener noreferrer">www.techtales.com.br</a></p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+
+  <script>
+    (() => {
+      const tabs = document.querySelectorAll('[data-bs-toggle="tab"]');
+      const storedLanguage = localStorage.getItem('accessible-timeline-readme-language');
+      const browserLanguage = (navigator.language || '').toLowerCase();
+      const initialTabId = storedLanguage === 'en' || (!storedLanguage && browserLanguage.startsWith('en')) ? 'en-tab' : 'pt-tab';
+      const initialTab = document.getElementById(initialTabId);
+
+      if (initialTab && !initialTab.classList.contains('active')) {
+        bootstrap.Tab.getOrCreateInstance(initialTab).show();
+      }
+
+      tabs.forEach((tab) => {
+        tab.addEventListener('shown.bs.tab', (event) => {
+          const language = event.target.id === 'en-tab' ? 'en' : 'pt';
+          document.documentElement.lang = language === 'en' ? 'en' : 'pt-BR';
+          localStorage.setItem('accessible-timeline-readme-language', language);
+          history.replaceState(null, '', `#${language}`);
+        });
+      });
+
+      const hashLanguage = location.hash.replace('#', '').toLowerCase();
+      if (hashLanguage === 'pt' || hashLanguage === 'en') {
+        const hashTab = document.getElementById(`${hashLanguage}-tab`);
+        if (hashTab) bootstrap.Tab.getOrCreateInstance(hashTab).show();
+      }
+    })();
+  </script>
 </body>
 </html>

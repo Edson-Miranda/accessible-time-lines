@@ -27,7 +27,8 @@ accessible-timeline/
 ├── run.py                           # Ponto de entrada do aplicativo
 ├── requirements.txt                 # Dependências (wxPython, playwright)
 ├── README.md                        # Apresentação do projeto e guia de uso
-├── CHANGELOG.txt                    # Histórico de alterações voltado aos usuários
+├── README.html                      # Manual do usuário multilíngue acessível
+├── CHANGELOG.html                   # Histórico de alterações voltado aos usuários
 ├── CHANGELOG_DEV.md                 # Histórico de desenvolvimento interno
 ├── AGENTS.md                        # Diretrizes permanentes de governança e acessibilidade
 ├── src/

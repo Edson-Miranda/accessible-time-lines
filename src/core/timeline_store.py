@@ -70,10 +70,22 @@ class TimelineStore:
             # Guardar o ID do post atualmente selecionado para preservar a posição
             target_selected_id = self._current_post_id
 
-            if prepend:
-                self._posts = new_items + self._posts
+            # Se houver timestamps de publicação, ordena estritamente os mais recentes no topo (índice 0)
+            has_timestamps = any(p.created_at is not None for p in (self._posts + new_items))
+            if has_timestamps:
+                self._posts = self._posts + new_items
+                self._posts.sort(
+                    key=lambda p: (
+                        p.created_at.timestamp() if p.created_at else 0.0,
+                        int(p.id) if p.id.isdigit() else 0
+                    ),
+                    reverse=True
+                )
             else:
-                self._posts.extend(new_items)
+                if prepend:
+                    self._posts = new_items + self._posts
+                else:
+                    self._posts.extend(new_items)
 
             # Recalcular índice para preservar a posição de leitura
             if target_selected_id and target_selected_id in self._posts_by_id:

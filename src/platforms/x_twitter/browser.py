@@ -174,7 +174,13 @@ class XBrowserManager:
             btn = page.wait_for_selector('[data-testid="tweetButton"]', timeout=8000)
             if btn and btn.is_enabled():
                 btn.click()
-                time.sleep(2.5)
+                time.sleep(2.0)
+                # Retorna para a página inicial para recarregar o fluxo e capturar o novo tweet publicado
+                try:
+                    page.goto("https://x.com/home", wait_until="domcontentloaded", timeout=25000)
+                    time.sleep(1.5)
+                except Exception as nav_e:
+                    logger.debug(f"Aviso ao retornar para home após postar: {nav_e}")
                 self._set_status("Publicação enviada com sucesso!")
                 return True
             else:
