@@ -1,6 +1,28 @@
-# Changelog de Desenvolvimento (Interno) - Accessible Timeline
+## [0.1.0-dev.7] - 2026-10-16
 
-Este documento registra todas as alterações técnicas, refatorações e adições internas da base de código, organizadas por versões internas.
+### Adicionado
+- **Abertura Rápida de Links com `Control + Enter`**:
+  - Implementado atalho `Ctrl + Enter` (e acelerador no menu Timeline) para abrir links da publicação selecionada no navegador padrão do sistema.
+  - Implementado `SelectLinkDialog` com `wx.ComboBox` nativo acessível (`SysComboBox32` em modo `wx.CB_READONLY`), permitindo ao usuário escolher facilmente com setas Cima/Baixo qual link abrir quando o post possui mais de um link.
+  - Adicionado método `get_all_links()` no modelo `Post`, consolidando URLs de entidades expandidas, links contidos no texto, mídias anexadas e a própria URL da postagem no X, com deduplicação rigorosa.
+  - Diálogo de detalhes (`PostDetailsDialog`) atualizado para também utilizar seleção múltipla de links quando aplicável.
+
+### Corrigido
+- **Leitura do Post Completo na Lista pelo Leitor de Tela**:
+  - Removido o truncamento de 160 caracteres em `Post.to_accessible_summary()`. Agora o texto completo da publicação é disponibilizado na lista nativa `wx.ListCtrl`, permitindo ao usuário do NVDA e JAWS ouvir a mensagem na íntegra simplesmente navegando com as setas Cima e Baixo, sem necessidade de abrir a tela de detalhes apenas para ler o restante do post.
+- **Pré-carregamento Confiável de Todas as Guias na Inicialização**:
+  - Implementada rotina `_preload_all_tabs` no `XBrowserManager`, que visita as guias ("Para você", "Seguindo" e "Menções/Notificações") ao iniciar o programa, capturando os conteúdos para cada uma das listas antes de retornar à timeline principal.
+  - Mensagens informativas passo a passo publicadas na barra de status durante o carregamento inicial ("Carregando fluxo Para você...", "Carregando fluxo Seguindo...", "Carregando Menções e Notificações...", "Pronto. Publicações carregadas.").
+  - Alternância de abas reforçada com busca nativa de locators do Playwright (`_click_tab_by_name`) com fallback para script JS, garantindo o disparo confiável de eventos de clique nos componentes React do X.
+  - Ampliada a interceptação de endpoints de rede para cobrir toda a árvore `/i/api/`, suportando GraphQL, API v2 e estruturas com `globalObjects`.
+- **Seleção Inicial na Lista**:
+  - `MainWindow._sync_list` atualizado para garantir seleção e foco automático no primeiro item (`idx = 0`) assim que as primeiras postagens chegam.
+
+### Testes
+- Adicionados testes unitários em `tests/test_parser.py`:
+  - `test_post_full_text_not_truncated_in_summary`: validação de que textos com mais de 200 caracteres não são truncados no resumo da lista.
+  - `test_post_get_all_links`: validação da extração e integridade de múltiplos links (texto, entidades, mídia e post).
+  - `test_parse_global_objects_notifications`: validação da extração de postagens em estruturas `globalObjects`.
 
 ---
 

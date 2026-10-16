@@ -109,6 +109,14 @@ def _parse_single_tweet(tweet_data: Dict[str, Any]) -> Optional[Post]:
         if m_url:
             media_items.append(MediaItem(media_type=m_type, url=m_url, alt_text=alt_text))
 
+    # URLs das entidades
+    urls: List[str] = []
+    entities_urls = legacy.get("entities", {}).get("urls", [])
+    for u in entities_urls:
+        target = u.get("expanded_url") or u.get("url")
+        if target and target not in urls:
+            urls.append(target)
+
     post_url = f"https://x.com/{author_username}/status/{rest_id}"
 
     return Post(
@@ -123,6 +131,7 @@ def _parse_single_tweet(tweet_data: Dict[str, Any]) -> Optional[Post]:
         retweet_count=retweet_count,
         reply_count=reply_count,
         media_items=media_items,
+        urls=urls,
         url=post_url,
         is_retweet=is_retweet,
         retweeted_by=retweeted_by,
@@ -134,10 +143,41 @@ def _parse_single_tweet(tweet_data: Dict[str, Any]) -> Optional[Post]:
 def parse_x_graphql_response(payload: Dict[str, Any]) -> List[Post]:
     """
     Varre recursivamente o payload da resposta GraphQL do X
-    buscando e extraindo postagens encontradas nas instruções da timeline.
+    buscando e extraindo postagens encontradas nas instruções da timeline,
+    suportando também estruturas com globalObjects.
     """
     posts: List[Post] = []
     seen_ids = set()
+
+    # Suporte a respostas de notificações / API legada com globalObjects
+    if isinstance(payload, dict) and "globalObjects" in payload:
+        global_objects = payload.get("globalObjects", {})
+        if isinstance(global_objects, dict):
+            tweets_dict = global_objects.get("tweets", {})
+            users_dict = global_objects.get("users", {})
+            for tid, t_legacy in tweets_dict.items():
+                if tid in seen_ids:
+                    continue
+                u_id = str(t_legacy.get("user_id_str") or t_legacy.get("user_id") or "")
+                u_obj = users_dict.get(u_id, {})
+                simulated_node = {
+                    "rest_id": str(tid),
+                    "legacy": t_legacy,
+                    "core": {
+                        "user_results": {
+                            "result": {
+                                "legacy": {
+                                    "name": u_obj.get("name", "Usuário Desconhecido"),
+                                    "screen_name": u_obj.get("screen_name", "desconhecido"),
+                                }
+                            }
+                        }
+                    }
+                }
+                p = _parse_single_tweet(simulated_node)
+                if p and p.id not in seen_ids:
+                    seen_ids.add(p.id)
+                    posts.append(p)
 
     def walk_and_find_tweets(data: Any):
         if not isinstance(data, (dict, list)):

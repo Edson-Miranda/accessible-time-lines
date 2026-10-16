@@ -30,6 +30,7 @@ class Post:
     retweet_count: int = 0
     reply_count: int = 0
     media_items: List[MediaItem] = field(default_factory=list)
+    urls: List[str] = field(default_factory=list)
     url: str = ""
     is_retweet: bool = False
     retweeted_by: Optional[str] = None
@@ -54,10 +55,41 @@ class Post:
             return "GIF"
         return f"{count} mídias"
 
+    def get_all_links(self) -> List[str]:
+        """
+        Retorna todos os links únicos associados à publicação:
+        links contidos nas entidades/texto, mídias e a URL da própria postagem.
+        """
+        links: List[str] = []
+
+        # 1. URLs das entidades extraídas do tweet
+        for u in self.urls:
+            if u and u not in links:
+                links.append(u)
+
+        # 2. URLs detectadas no texto da postagem
+        import re
+        url_pattern = re.compile(r'https?://[^\s<>"\'()]+')
+        for match in url_pattern.findall(self.text):
+            clean = match.rstrip(".,;:!?")
+            if clean and clean not in links:
+                links.append(clean)
+
+        # 3. URLs das mídias anexadas
+        for m in self.media_items:
+            if m.url and m.url not in links:
+                links.append(m.url)
+
+        # 4. URL da publicação no X
+        if self.url and self.url not in links:
+            links.append(self.url)
+
+        return links
+
     def to_accessible_summary(self) -> str:
         """
-        Retorna uma linha concisa para anúncio natural na lista pelo leitor de tela.
-        Evita poluição sonora e destaca as informações fundamentais.
+        Retorna o texto da publicação para anúncio natural na lista pelo leitor de tela.
+        Lê o post completo sem truncar, normalizando quebras de linha em espaços.
         """
         prefix = ""
         if self.is_retweet and self.retweeted_by:
@@ -67,10 +99,8 @@ class Post:
 
         time_part = f", {self.created_at_str}" if self.created_at_str else ""
         
-        # Limpar quebras de linha no resumo de linha única para melhor leitura na lista
+        # Normalizar quebras de linha em espaços para leitura contínua e fluida pelo leitor de tela
         clean_text = " ".join(self.text.split())
-        if len(clean_text) > 160:
-            clean_text = clean_text[:157] + "..."
 
         metrics = []
         if self.like_count > 0:

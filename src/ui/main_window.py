@@ -9,11 +9,12 @@ e lista de publicações à direita totalmente operável por teclado.
 import ctypes
 import logging
 from typing import Dict, List, Optional, Tuple
+import webbrowser
 import wx
 from src.core.models import Post
 from src.core.timeline_store import TimelineStore
 from src.platforms.x_twitter.reader import XTimelineReader
-from src.ui.dialogs import PostDetailsDialog
+from src.ui.dialogs import PostDetailsDialog, SelectLinkDialog
 
 logger = logging.getLogger("AccessibleTimeline.MainWindow")
 
@@ -68,6 +69,7 @@ class MainWindow(wx.Frame):
         item_load_more = timeline_menu.Append(wx.ID_ANY, "Carregar &Mais Postagens\tCtrl+M", "Solicita rolagem no navegador para mais postagens")
         timeline_menu.AppendSeparator()
         item_details = timeline_menu.Append(wx.ID_ANY, "Ver &Detalhes da Publicação\tEnter", "Abre os detalhes da postagem selecionada")
+        item_open_link = timeline_menu.Append(wx.ID_ANY, "Abrir &Link no Navegador\tCtrl+Enter", "Abre o link da postagem selecionada no navegador padrão")
         timeline_menu.AppendSeparator()
         item_exit = timeline_menu.Append(wx.ID_EXIT, "Sai&r\tAlt+F4", "Fecha o Accessible Timeline")
         menu_bar.Append(timeline_menu, "&Timeline")
@@ -82,6 +84,7 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_refresh, item_refresh)
         self.Bind(wx.EVT_MENU, self._on_load_more, item_load_more)
         self.Bind(wx.EVT_MENU, self._on_open_details, item_details)
+        self.Bind(wx.EVT_MENU, self._on_open_link, item_open_link)
         self.Bind(wx.EVT_MENU, self._on_about, item_about)
         self.Bind(wx.EVT_MENU, lambda e: self.Close(), item_exit)
 
@@ -244,7 +247,12 @@ class MainWindow(wx.Frame):
             self._cycle_stream(forward=not shift)
             return
 
-        if key == wx.WXK_RETURN:
+        # Atalho Ctrl + Enter (ou Ctrl + Numpad Enter) para abrir links no navegador
+        if ctrl and key in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+            self._on_open_link(None)
+            return
+
+        if key in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
             # Se o foco estiver na lista, abre os detalhes
             focused = wx.Window.FindFocus()
             if focused == self.list_ctrl:
@@ -286,6 +294,41 @@ class MainWindow(wx.Frame):
         else:
             wx.Bell()
 
+    def _on_open_link(self, event=None):
+        """Abre o link no navegador padrão ou exibe caixa de combinação para múltiplos links."""
+        store = self.stores.get(self._active_stream)
+        if not store:
+            return
+        post = store.get_current_post()
+        if not post:
+            sel = self.list_ctrl.GetFirstSelected()
+            if sel != -1:
+                post = store.get_post(sel)
+
+        if not post:
+            wx.Bell()
+            return
+
+        links = post.get_all_links()
+        if not links:
+            self.status_bar.SetStatusText("Nenhum link disponível nesta publicação.")
+            wx.Bell()
+            return
+
+        if len(links) == 1:
+            target_url = links[0]
+            self.status_bar.SetStatusText(f"Abrindo link no navegador padrão: {target_url}")
+            webbrowser.open(target_url)
+        else:
+            dlg = SelectLinkDialog(self, links, post_author=post.author_name)
+            if dlg.ShowModal() == wx.ID_OK:
+                selected_url = dlg.get_selected_link()
+                if selected_url:
+                    self.status_bar.SetStatusText(f"Abrindo link no navegador padrão: {selected_url}")
+                    webbrowser.open(selected_url)
+            dlg.Destroy()
+            self.list_ctrl.SetFocus()
+
     def _on_refresh(self, event):
         label = self._get_stream_display_name(self._active_stream)
         self.status_bar.SetStatusText(f"Solicitando atualização de {label} no navegador...")
@@ -303,9 +346,10 @@ class MainWindow(wx.Frame):
             "Navegação na Árvore e Lista:\n"
             "- Árvore (esquerda): Nó da conta com os fluxos Para você, Seguindo, Menções e Mensagens diretas.\n"
             "- Tab / Shift+Tab: Alternar o foco entre a Árvore de fluxos e a Lista de postagens.\n"
-            "- Setas Cima / Baixo na lista: Ler publicações do fluxo ativo.\n"
+            "- Setas Cima / Baixo na lista: Ler publicações do fluxo ativo (leitura do texto completo).\n"
             "- Control + Windows + Setas: Alternar rapidamente entre os fluxos.\n"
             "- Enter: Abrir detalhes completos da postagem.\n"
+            "- Control + Enter: Abrir link no navegador padrão (com diálogo de seleção se houver mais de um link).\n"
             "- F5: Atualizar o fluxo ativo.\n"
             "- Ctrl+M: Carregar mais postagens."
         )
@@ -340,6 +384,10 @@ class MainWindow(wx.Frame):
                 self.list_ctrl.Select(current_idx, True)
                 self.list_ctrl.Focus(current_idx)
                 self.list_ctrl.EnsureVisible(current_idx)
+            elif new_count > 0:
+                self.list_ctrl.Select(0, True)
+                self.list_ctrl.Focus(0)
+                self.list_ctrl.EnsureVisible(0)
 
             label = self._get_stream_display_name(self._active_stream)
             self.status_bar.SetStatusText(f"Pronto. {new_count} publicações em {label}.")

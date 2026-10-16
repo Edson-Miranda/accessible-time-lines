@@ -134,6 +134,55 @@ class XBrowserManager:
         except Exception:
             pass
 
+    def _click_tab_by_name(self, page: Page, feed_name: str) -> bool:
+        """Clica na aba especificada usando locators nativos do Playwright com fallback JS."""
+        if feed_name in ("mentions", "notifications"):
+            try:
+                page.goto("https://x.com/notifications", wait_until="domcontentloaded", timeout=25000)
+                return True
+            except Exception as e:
+                logger.warning(f"Erro ao navegar para notificações: {e}")
+                return False
+        elif feed_name in ("dms", "messages"):
+            try:
+                page.goto("https://x.com/messages", wait_until="domcontentloaded", timeout=25000)
+                return True
+            except Exception as e:
+                logger.warning(f"Erro ao navegar para mensagens: {e}")
+                return False
+
+        if "/home" not in page.url:
+            try:
+                page.goto("https://x.com/home", wait_until="domcontentloaded", timeout=25000)
+                time.sleep(1.0)
+            except Exception:
+                pass
+
+        try:
+            import re
+            if feed_name == "following":
+                loc = page.locator('[role="tab"]').filter(has_text=re.compile(r"seguindo|following", re.I))
+                if loc.count() > 0:
+                    loc.first.click(timeout=4000)
+                    return True
+                tabs = page.locator('[role="tab"]')
+                if tabs.count() >= 2:
+                    tabs.nth(1).click(timeout=4000)
+                    return True
+            elif feed_name in ("for_you", "home"):
+                loc = page.locator('[role="tab"]').filter(has_text=re.compile(r"para voc|for you", re.I))
+                if loc.count() > 0:
+                    loc.first.click(timeout=4000)
+                    return True
+                tabs = page.locator('[role="tab"]')
+                if tabs.count() >= 1:
+                    tabs.nth(0).click(timeout=4000)
+                    return True
+        except Exception as e:
+            logger.debug(f"Locator click falhou, tentando fallback JS: {e}")
+
+        return self._execute_tab_switch_js(page, feed_name)
+
     def _execute_tab_switch_js(self, page: Page, feed_name: str) -> bool:
         """Executa clique seguro na aba do X via JavaScript no DOM."""
         if feed_name in ("mentions", "notifications"):
@@ -188,29 +237,91 @@ class XBrowserManager:
     def _handle_response(self, response: Response):
         """Intercepta passivamente respostas de rede da API do X e roteia para o feed correto."""
         url = response.url
-        if "/i/api/graphql/" in url or "/i/api/2/" in url:
+        if "/i/api/" in url:
             try:
                 content_type = response.headers.get("content-type", "")
                 if "application/json" in content_type:
-                    body = response.text()
-                    if body:
+                    try:
+                        payload = response.json()
+                    except Exception:
+                        body = response.text()
+                        if not body:
+                            return
                         payload = json.loads(body)
-                        posts = parse_x_graphql_response(payload)
-                        if posts:
-                            if "HomeLatestTimeline" in url:
-                                feed_type = "following"
-                            elif "Notifications" in url or "notifications" in url:
-                                feed_type = "mentions"
-                            elif "dm" in url or "messages" in url:
-                                feed_type = "dms"
-                            else:
-                                feed_type = "for_you"
 
-                            logger.info(f"Interceptadas {len(posts)} publicações para o fluxo '{feed_type}'")
-                            if self.on_posts_callback:
-                                self.on_posts_callback(feed_type, posts)
+                    posts = parse_x_graphql_response(payload)
+                    if posts:
+                        if "HomeLatestTimeline" in url:
+                            feed_type = "following"
+                        elif "Notifications" in url or "notifications" in url:
+                            feed_type = "mentions"
+                        elif "dm" in url or "messages" in url:
+                            feed_type = "dms"
+                        else:
+                            feed_type = "for_you"
+
+                        logger.info(f"Interceptadas {len(posts)} publicações para o fluxo '{feed_type}'")
+                        if self.on_posts_callback:
+                            self.on_posts_callback(feed_type, posts)
             except Exception as e:
                 logger.debug(f"Aviso ao processar resposta: {e}")
+
+    def _preload_all_tabs(self, page: Page):
+        """
+        Navega pelas guias principais ao abrir o programa para carregar
+        e capturar o conteúdo de cada fluxo, atualizando a barra de status.
+        """
+        logger.info("Iniciando pré-carregamento de todas as guias...")
+
+        # 1. Carrega fluxo Para você (Home inicial)
+        self._set_status("Carregando fluxo Para você...")
+        try:
+            page.wait_for_selector('[role="tab"]', timeout=15000)
+            self._click_tab_by_name(page, "for_you")
+        except Exception as e:
+            logger.debug(f"Aviso ao aguardar/selecionar aba Para você: {e}")
+        time.sleep(3.5)
+        self._detect_account_info(page)
+
+        if not self._running:
+            return
+
+        # 2. Carrega fluxo Seguindo
+        self._set_status("Carregando fluxo Seguindo...")
+        try:
+            self._click_tab_by_name(page, "following")
+        except Exception as e:
+            logger.debug(f"Aviso ao selecionar aba Seguindo: {e}")
+        time.sleep(3.5)
+        self._detect_account_info(page)
+
+        if not self._running:
+            return
+
+        # 3. Carrega fluxo Menções e Notificações
+        self._set_status("Carregando Menções e Notificações...")
+        try:
+            page.goto("https://x.com/notifications", wait_until="domcontentloaded", timeout=25000)
+        except Exception as e:
+            logger.debug(f"Aviso ao navegar para notificações: {e}")
+        time.sleep(3.5)
+        self._detect_account_info(page)
+
+        if not self._running:
+            return
+
+        # 4. Retorna para a página inicial (fluxo Para você)
+        self._set_status("Finalizando carregamento e retornando ao fluxo principal...")
+        try:
+            page.goto("https://x.com/home", wait_until="domcontentloaded", timeout=25000)
+            page.wait_for_selector('[role="tab"]', timeout=15000)
+            self._click_tab_by_name(page, "for_you")
+        except Exception as e:
+            logger.debug(f"Aviso ao retornar para página inicial: {e}")
+        time.sleep(1.5)
+        self._detect_account_info(page)
+
+        self._set_status("Pronto. Publicações carregadas.")
 
     def _worker_loop(self):
         """Loop executado na thread de segundo plano."""
@@ -261,17 +372,10 @@ class XBrowserManager:
                             # Reinicia o loop agora com headless=True permanente
                             continue
 
-                    self._set_status("Pronto. Monitorando publicações do X...")
-                    time.sleep(2.0)
                     self._detect_account_info(page)
 
-                    # Pré-carrega ambos os fluxos principais (Seguindo e Para você)
-                    logger.info("Pré-carregando fluxos na inicialização...")
-                    self._execute_tab_switch_js(page, "following")
-                    time.sleep(2.5)
-                    self._execute_tab_switch_js(page, "for_you")
-                    time.sleep(1.0)
-                    self._detect_account_info(page)
+                    # Navega nas guias para carregar o conteúdo de cada uma na inicialização
+                    self._preload_all_tabs(page)
 
                     # Loop de comandos durante a execução normal
                     while self._running:
@@ -282,7 +386,7 @@ class XBrowserManager:
                             elif cmd == "switch_tab":
                                 feed_name = arg
                                 self._set_status(f"Acessando fluxo {feed_name}...")
-                                self._execute_tab_switch_js(page, feed_name)
+                                self._click_tab_by_name(page, feed_name)
                                 self._detect_account_info(page)
                             elif cmd == "navigate":
                                 url = arg

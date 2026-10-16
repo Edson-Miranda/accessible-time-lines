@@ -141,6 +141,82 @@ class TestXParser(unittest.TestCase):
         self.assertEqual(posts[0].author_name, "Canaltech")
         self.assertEqual(posts[0].author_username, "canaltech")
 
+    def test_post_full_text_not_truncated_in_summary(self):
+        from src.core.models import Post
+        long_text = (
+            "Este é um texto consideravelmente longo com mais de duzentos caracteres para garantir que "
+            "o leitor de tela (NVDA e JAWS) consiga ler toda a publicação diretamente ao navegar na "
+            "lista pelas setas para cima e para baixo, sem que o texto seja interrompido abruptamente "
+            "em cento e sessenta caracteres."
+        )
+        post = Post(
+            id="123",
+            platform="x_twitter",
+            author_name="Acessibilidade Brasil",
+            author_username="acessibilidade",
+            text=long_text,
+            like_count=10
+        )
+        summary = post.to_accessible_summary()
+        # O resumo deve conter todo o texto longo, sem truncar com '...'
+        self.assertIn("em cento e sessenta caracteres.", summary)
+        self.assertNotIn("...", summary)
+
+    def test_post_get_all_links(self):
+        from src.core.models import Post, MediaItem
+        post = Post(
+            id="456",
+            platform="x_twitter",
+            author_name="Tech News",
+            author_username="technews",
+            text="Confira https://exemplo.com/materia e também https://outro.com/artigo!",
+            urls=["https://exemplo.com/materia"],
+            media_items=[MediaItem(media_type="image", url="https://pbs.twimg.com/media/foto.jpg")],
+            url="https://x.com/technews/status/456"
+        )
+        links = post.get_all_links()
+        self.assertIn("https://exemplo.com/materia", links)
+        self.assertIn("https://outro.com/artigo", links)
+        self.assertIn("https://pbs.twimg.com/media/foto.jpg", links)
+        self.assertIn("https://x.com/technews/status/456", links)
+        # Deve ter 4 links únicos
+        self.assertEqual(len(links), 4)
+
+    def test_parse_global_objects_notifications(self):
+        payload = {
+            "globalObjects": {
+                "tweets": {
+                    "888123": {
+                        "id_str": "888123",
+                        "full_text": "Você foi mencionado aqui https://t.co/xyz",
+                        "user_id_str": "555",
+                        "favorite_count": 5,
+                        "entities": {
+                            "urls": [
+                                {
+                                    "url": "https://t.co/xyz",
+                                    "expanded_url": "https://noticia.com/alvo"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "users": {
+                    "555": {
+                        "name": "Amigo Dev",
+                        "screen_name": "amigodev"
+                    }
+                }
+            }
+        }
+        posts = parse_x_graphql_response(payload)
+        self.assertEqual(len(posts), 1)
+        p = posts[0]
+        self.assertEqual(p.id, "888123")
+        self.assertEqual(p.author_name, "Amigo Dev")
+        self.assertEqual(p.author_username, "amigodev")
+        self.assertIn("https://noticia.com/alvo", p.urls)
+
 
 if __name__ == "__main__":
     unittest.main()

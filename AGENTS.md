@@ -123,10 +123,14 @@ O projeto adota uma separação rigorosa entre **versões internas de desenvolvi
 - **Changelog de Desenvolvimento (`CHANGELOG_DEV.md`)**:
   - Documenta alterações técnicas detalhadas, refatorações, adições de módulos e testes.
   - Atualizado a cada avanço técnico ou versão interna.
+  - **Formatação Limpa**: O arquivo deve conter exclusivamente as seções das versões diretamente (iniciando em `## [X.Y.Z-dev.N]`), sem comentários introdutórios, títulos gerais ou preâmbulos no topo do arquivo.
 - **Changelog Público (`CHANGELOG.txt`)**:
   - Voltado aos usuários finais, em formato de texto simples (.txt), com escrita calorosa, clara e amigável para leitores de tela.
   - **REGRA PERMANENTE**: O arquivo `CHANGELOG.txt` **NUNCA** deve ser atualizado automaticamente em tarefas cotidianas.
   - **Gatilho de Atualização**: O `CHANGELOG.txt` só será atualizado quando o usuário der a ordem explícita:
     > *"gere um changelog da versão interna X até a Y com a versão tal"*
   - Nesse momento, e apenas nesse momento, o agente irá consolidar as alterações das versões internas `X` até `Y` sob a versão pública designada pelo usuário.
+
+### 8.3. Padrão Obrigatório de Mensagens de Commit no Git
+- A cada commit realizado no repositório Git, a mensagem de commit deve replicar exatamente a entrada correspondente da versão que foi registrada no `CHANGELOG_DEV.md` (incluindo o título da versão interna e o detalhamento dos itens modificados, adicionados, corrigidos ou testados).
 
