@@ -108,6 +108,226 @@ class XBrowserManager:
         """Comanda a página a rolar para baixo para carregar mais publicações."""
         self._cmd_queue.put(("scroll_down", None))
 
+    def execute_action(self, action_name: str, timeout: float = 35.0, **kwargs) -> bool:
+        """Envia comando de ação para a thread do navegador e aguarda a conclusão."""
+        if not self._running:
+            return False
+        event = threading.Event()
+        res_holder = {"success": False}
+        self._cmd_queue.put(("action", (action_name, kwargs, event, res_holder)))
+        event.wait(timeout=timeout)
+        return res_holder["success"]
+
+    def _do_create_post(self, page: Page, text: str) -> bool:
+        """Cria e envia uma nova publicação no X."""
+        logger.info("Executando postagem de tweet...")
+        self._set_status("Enviando publicação para o X...")
+        try:
+            page.goto("https://x.com/compose/post", wait_until="domcontentloaded", timeout=25000)
+            box = page.wait_for_selector('[data-testid="tweetTextarea_0"]', timeout=15000)
+            if not box:
+                return False
+            box.click()
+            box.fill(text)
+            time.sleep(0.5)
+
+            btn = page.wait_for_selector('[data-testid="tweetButton"]', timeout=8000)
+            if btn and btn.is_enabled():
+                btn.click()
+                time.sleep(2.5)
+                self._set_status("Publicação enviada com sucesso!")
+                return True
+            else:
+                self._set_status("Erro: Botão de publicação não habilitado.")
+                return False
+        except Exception as e:
+            logger.error(f"Erro ao criar post: {e}")
+            self._set_status(f"Falha ao publicar: {e}")
+            return False
+
+    def _do_reply_to_post(self, page: Page, post_id: str, text: str, author_username: str = "") -> bool:
+        """Responde a uma publicação existente no X."""
+        logger.info(f"Executando resposta ao post {post_id}...")
+        self._set_status(f"Enviando resposta para @{author_username or 'post'}...")
+        try:
+            url = f"https://x.com/i/status/{post_id}"
+            page.goto(url, wait_until="domcontentloaded", timeout=25000)
+            box = page.wait_for_selector('[data-testid="tweetTextarea_0"]', timeout=15000)
+            if not box:
+                return False
+            box.click()
+            box.fill(text)
+            time.sleep(0.5)
+
+            btn = page.locator('[data-testid="tweetButtonInline"], [data-testid="tweetButton"]').first
+            if btn.is_visible() and btn.is_enabled():
+                btn.click()
+                time.sleep(2.5)
+                self._set_status("Resposta enviada com sucesso!")
+                return True
+            else:
+                self._set_status("Erro: Botão de resposta não habilitado.")
+                return False
+        except Exception as e:
+            logger.error(f"Erro ao responder: {e}")
+            self._set_status(f"Falha ao responder: {e}")
+            return False
+
+    def _do_retweet_post(self, page: Page, post_id: str) -> bool:
+        """Reposta (retweet simples) uma publicação no X."""
+        logger.info(f"Executando retweet do post {post_id}...")
+        self._set_status("Repostando publicação no X...")
+        try:
+            url = f"https://x.com/i/status/{post_id}"
+            page.goto(url, wait_until="domcontentloaded", timeout=25000)
+            time.sleep(1.0)
+            rt_btn = page.wait_for_selector('[data-testid="retweet"]', timeout=12000)
+            if not rt_btn:
+                if page.locator('[data-testid="unretweet"]').count() > 0:
+                    self._set_status("Esta publicação já foi repostada.")
+                    return True
+                return False
+            rt_btn.click()
+            time.sleep(0.5)
+
+            confirm_btn = page.wait_for_selector('[data-testid="retweetConfirm"]', timeout=6000)
+            if confirm_btn:
+                confirm_btn.click()
+                time.sleep(1.5)
+                self._set_status("Publicação repostada com sucesso!")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Erro ao repostar: {e}")
+            self._set_status(f"Falha ao repostar: {e}")
+            return False
+
+    def _do_quote_post(self, page: Page, post_id: str, text: str, tweet_url: str = "") -> bool:
+        """Reposta com comentário (citar publicação) no X."""
+        logger.info(f"Executando citação do post {post_id}...")
+        self._set_status("Publicando citação no X...")
+        try:
+            target_url = tweet_url or f"https://x.com/i/status/{post_id}"
+            full_quote_text = f"{text.strip()} {target_url}"
+
+            page.goto("https://x.com/compose/post", wait_until="domcontentloaded", timeout=25000)
+            box = page.wait_for_selector('[data-testid="tweetTextarea_0"]', timeout=15000)
+            if not box:
+                return False
+            box.click()
+            box.fill(full_quote_text)
+            time.sleep(1.0)
+
+            btn = page.wait_for_selector('[data-testid="tweetButton"]', timeout=8000)
+            if btn and btn.is_enabled():
+                btn.click()
+                time.sleep(2.5)
+                self._set_status("Citação publicada com sucesso!")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Erro ao citar post: {e}")
+            self._set_status(f"Falha ao publicar citação: {e}")
+            return False
+
+    def _do_like_post(self, page: Page, post_id: str) -> bool:
+        """Curte uma publicação no X."""
+        logger.info(f"Executando curtida no post {post_id}...")
+        self._set_status("Curtindo publicação...")
+        try:
+            url = f"https://x.com/i/status/{post_id}"
+            page.goto(url, wait_until="domcontentloaded", timeout=25000)
+            time.sleep(1.0)
+
+            if page.locator('[data-testid="unlike"]').count() > 0:
+                self._set_status("A publicação já está curtida.")
+                return True
+
+            like_btn = page.wait_for_selector('[data-testid="like"]', timeout=10000)
+            if like_btn:
+                like_btn.click()
+                time.sleep(1.5)
+                self._set_status("Publicação curtida com sucesso!")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Erro ao curtir post: {e}")
+            self._set_status(f"Falha ao curtir publicação: {e}")
+            return False
+
+    def _do_unlike_post(self, page: Page, post_id: str) -> bool:
+        """Remove a curtida (descurtir) de uma publicação no X."""
+        logger.info(f"Executando descurtida no post {post_id}...")
+        self._set_status("Descurtindo publicação...")
+        try:
+            url = f"https://x.com/i/status/{post_id}"
+            page.goto(url, wait_until="domcontentloaded", timeout=25000)
+            time.sleep(1.0)
+
+            unlike_btn = page.wait_for_selector('[data-testid="unlike"]', timeout=10000)
+            if unlike_btn:
+                unlike_btn.click()
+                time.sleep(1.5)
+                self._set_status("Curtida removida com sucesso!")
+                return True
+            else:
+                self._set_status("A publicação não estava curtida.")
+                return True
+        except Exception as e:
+            logger.error(f"Erro ao descurtir post: {e}")
+            self._set_status(f"Falha ao descurtir publicação: {e}")
+            return False
+
+    def _do_send_dm(self, page: Page, recipient: str, text: str) -> bool:
+        """Envia mensagem direta (DM) no X."""
+        clean_user = recipient.lstrip("@").strip()
+        logger.info(f"Enviando DM para @{clean_user}...")
+        self._set_status(f"Enviando mensagem direta para @{clean_user}...")
+        try:
+            page.goto("https://x.com/messages/compose", wait_until="domcontentloaded", timeout=25000)
+            search_input = page.wait_for_selector('input[data-testid="searchPeople"]', timeout=15000)
+            if not search_input:
+                search_input = page.wait_for_selector('input[type="text"]', timeout=8000)
+            if not search_input:
+                return False
+
+            search_input.fill(clean_user)
+            time.sleep(1.5)
+
+            user_row = page.wait_for_selector('[data-testid="TypeaheadUser"]', timeout=10000)
+            if user_row:
+                user_row.click()
+                time.sleep(0.5)
+
+            next_btn = page.wait_for_selector('[data-testid="nextButton"]', timeout=6000)
+            if next_btn and next_btn.is_enabled():
+                next_btn.click()
+                time.sleep(1.5)
+
+            dm_box = page.wait_for_selector('[data-testid="dmComposerTextInput"]', timeout=12000)
+            if not dm_box:
+                dm_box = page.wait_for_selector('div[contenteditable="true"]', timeout=8000)
+            if not dm_box:
+                return False
+
+            dm_box.click()
+            dm_box.fill(text)
+            time.sleep(0.5)
+
+            send_btn = page.locator('[data-testid="dmComposerSendButton"]').first
+            if send_btn.is_visible() and send_btn.is_enabled():
+                send_btn.click()
+            else:
+                dm_box.press("Enter")
+
+            time.sleep(2.0)
+            self._set_status(f"Mensagem direta enviada para @{clean_user} com sucesso!")
+            return True
+        except Exception as e:
+            logger.error(f"Erro ao enviar DM: {e}")
+            self._set_status(f"Falha ao enviar DM: {e}")
+            return False
+
     def _detect_account_info(self, page: Page):
         """Tenta extrair o nome e usuário da conta conectada."""
         js_code = """
@@ -404,12 +624,28 @@ class XBrowserManager:
                                     self._set_status("Timeline atualizada.")
                                 except Exception as e:
                                     self._set_status(f"Erro ao atualizar: {e}")
-                            elif cmd == "scroll_down":
-                                self._set_status("Carregando mais postagens...")
+                            elif cmd == "action":
+                                action_name, kwargs, event, res_holder = arg
                                 try:
-                                    page.evaluate("window.scrollBy(0, window.innerHeight * 2);")
-                                except Exception as e:
-                                    logger.warning(f"Erro ao rolar: {e}")
+                                    if action_name == "create_post":
+                                        res_holder["success"] = self._do_create_post(page, **kwargs)
+                                    elif action_name == "reply_to_post":
+                                        res_holder["success"] = self._do_reply_to_post(page, **kwargs)
+                                    elif action_name == "retweet_post":
+                                        res_holder["success"] = self._do_retweet_post(page, **kwargs)
+                                    elif action_name == "quote_post":
+                                        res_holder["success"] = self._do_quote_post(page, **kwargs)
+                                    elif action_name == "like_post":
+                                        res_holder["success"] = self._do_like_post(page, **kwargs)
+                                    elif action_name == "unlike_post":
+                                        res_holder["success"] = self._do_unlike_post(page, **kwargs)
+                                    elif action_name == "send_dm":
+                                        res_holder["success"] = self._do_send_dm(page, **kwargs)
+                                except Exception as act_err:
+                                    logger.error(f"Erro ao executar ação {action_name}: {act_err}")
+                                    res_holder["success"] = False
+                                finally:
+                                    event.set()
                         except queue.Empty:
                             pass
 

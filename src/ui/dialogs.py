@@ -166,3 +166,417 @@ class PostDetailsDialog(wx.Dialog):
         else:
             event.Skip()
 
+
+class NewPostDialog(wx.Dialog):
+    """
+    Diálogo acessível para composição e publicação de novo post/tweet.
+    Inclui contador de caracteres dinâmico (limite 280) e atalho Ctrl+Enter para envio.
+    """
+    MAX_CHARS = 280
+
+    def __init__(self, parent: wx.Window):
+        super().__init__(
+            parent,
+            title="Nova Publicação (280 caracteres restantes)",
+            size=(580, 320),
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
+        )
+        self.text_content = ""
+        self._init_ui()
+        self.CenterOnParent()
+
+    def _init_ui(self):
+        panel = wx.Panel(self)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        self.label = wx.StaticText(panel, label="&O que está acontecendo?")
+        sizer.Add(self.label, 0, wx.ALL, 10)
+
+        self.text_ctrl = wx.TextCtrl(
+            panel,
+            style=wx.TE_MULTILINE | wx.TE_PROCESS_ENTER
+        )
+        sizer.Add(self.text_ctrl, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
+
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.post_btn = wx.Button(panel, wx.ID_OK, label="&Publicar")
+        self.post_btn.SetDefault()
+        btn_sizer.Add(self.post_btn, 0, wx.RIGHT, 10)
+
+        cancel_btn = wx.Button(panel, wx.ID_CANCEL, label="&Cancelar")
+        btn_sizer.Add(cancel_btn, 0)
+
+        sizer.Add(btn_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
+        panel.SetSizer(sizer)
+
+        self.text_ctrl.Bind(wx.EVT_TEXT, self._on_text_changed)
+        self.Bind(wx.EVT_BUTTON, self._on_submit, id=wx.ID_OK)
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
+
+        wx.CallAfter(self.text_ctrl.SetFocus)
+
+    def _on_text_changed(self, event):
+        length = len(self.text_ctrl.GetValue())
+        remaining = self.MAX_CHARS - length
+        if remaining >= 0:
+            self.SetTitle(f"Nova Publicação ({remaining} caracteres restantes)")
+            self.post_btn.Enable(length > 0)
+        else:
+            self.SetTitle(f"Nova Publicação ({abs(remaining)} caracteres a mais!)")
+            self.post_btn.Enable(False)
+
+    def _on_submit(self, event):
+        text = self.text_ctrl.GetValue().strip()
+        if not text:
+            wx.MessageBox("Digite o texto da publicação antes de enviar.", "Aviso", wx.OK | wx.ICON_WARNING, self)
+            return
+        if len(text) > self.MAX_CHARS:
+            wx.MessageBox("O texto excede o limite de 280 caracteres.", "Limite excedido", wx.OK | wx.ICON_WARNING, self)
+            return
+        self.text_content = text
+        self.EndModal(wx.ID_OK)
+
+    def _on_char_hook(self, event):
+        key = event.GetKeyCode()
+        ctrl = event.ControlDown()
+        if ctrl and key in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+            self._on_submit(event)
+        elif key == wx.WXK_ESCAPE:
+            self.EndModal(wx.ID_CANCEL)
+        else:
+            event.Skip()
+
+    def get_text(self) -> str:
+        return self.text_content
+
+
+class ReplyDialog(wx.Dialog):
+    """
+    Diálogo acessível para responder a uma publicação no X.
+    """
+    MAX_CHARS = 280
+
+    def __init__(self, parent: wx.Window, post: Post):
+        super().__init__(
+            parent,
+            title=f"Responder a @{post.author_username} (280 restantes)",
+            size=(600, 420),
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
+        )
+        self.post = post
+        self.text_content = ""
+        self._init_ui()
+        self.CenterOnParent()
+
+    def _init_ui(self):
+        panel = wx.Panel(self)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        # Informações do post que está sendo respondido
+        orig_label = wx.StaticText(panel, label=f"Em resposta a {self.post.author_name} (@{self.post.author_username}):")
+        sizer.Add(orig_label, 0, wx.ALL, 10)
+
+        self.orig_text = wx.TextCtrl(
+            panel,
+            value=self.post.text,
+            size=(-1, 70),
+            style=wx.TE_MULTILINE | wx.TE_READONLY
+        )
+        sizer.Add(self.orig_text, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
+
+        # Campo da resposta
+        reply_label = wx.StaticText(panel, label="&Sua Resposta:")
+        sizer.Add(reply_label, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
+
+        self.text_ctrl = wx.TextCtrl(
+            panel,
+            style=wx.TE_MULTILINE | wx.TE_PROCESS_ENTER
+        )
+        sizer.Add(self.text_ctrl, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
+
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.reply_btn = wx.Button(panel, wx.ID_OK, label="&Responder")
+        self.reply_btn.SetDefault()
+        btn_sizer.Add(self.reply_btn, 0, wx.RIGHT, 10)
+
+        cancel_btn = wx.Button(panel, wx.ID_CANCEL, label="&Cancelar")
+        btn_sizer.Add(cancel_btn, 0)
+
+        sizer.Add(btn_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
+        panel.SetSizer(sizer)
+
+        self.text_ctrl.Bind(wx.EVT_TEXT, self._on_text_changed)
+        self.Bind(wx.EVT_BUTTON, self._on_submit, id=wx.ID_OK)
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
+
+        wx.CallAfter(self.text_ctrl.SetFocus)
+
+    def _on_text_changed(self, event):
+        length = len(self.text_ctrl.GetValue())
+        remaining = self.MAX_CHARS - length
+        if remaining >= 0:
+            self.SetTitle(f"Responder a @{self.post.author_username} ({remaining} restantes)")
+            self.reply_btn.Enable(length > 0)
+        else:
+            self.SetTitle(f"Responder a @{self.post.author_username} ({abs(remaining)} caracteres a mais!)")
+            self.reply_btn.Enable(False)
+
+    def _on_submit(self, event):
+        text = self.text_ctrl.GetValue().strip()
+        if not text:
+            wx.MessageBox("Digite o texto da sua resposta.", "Aviso", wx.OK | wx.ICON_WARNING, self)
+            return
+        if len(text) > self.MAX_CHARS:
+            wx.MessageBox("A resposta excede o limite de 280 caracteres.", "Limite excedido", wx.OK | wx.ICON_WARNING, self)
+            return
+        self.text_content = text
+        self.EndModal(wx.ID_OK)
+
+    def _on_char_hook(self, event):
+        key = event.GetKeyCode()
+        ctrl = event.ControlDown()
+        if ctrl and key in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+            self._on_submit(event)
+        elif key == wx.WXK_ESCAPE:
+            self.EndModal(wx.ID_CANCEL)
+        else:
+            event.Skip()
+
+    def get_text(self) -> str:
+        return self.text_content
+
+
+class QuoteDialog(wx.Dialog):
+    """
+    Diálogo acessível para citar/repostar uma publicação com comentário.
+    """
+    MAX_CHARS = 250
+
+    def __init__(self, parent: wx.Window, post: Post):
+        super().__init__(
+            parent,
+            title=f"Citar publicação de @{post.author_username} ({self.MAX_CHARS} restantes)",
+            size=(600, 420),
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
+        )
+        self.post = post
+        self.text_content = ""
+        self._init_ui()
+        self.CenterOnParent()
+
+    def _init_ui(self):
+        panel = wx.Panel(self)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        orig_label = wx.StaticText(panel, label=f"Citando publicação de {self.post.author_name} (@{self.post.author_username}):")
+        sizer.Add(orig_label, 0, wx.ALL, 10)
+
+        self.orig_text = wx.TextCtrl(
+            panel,
+            value=self.post.text,
+            size=(-1, 70),
+            style=wx.TE_MULTILINE | wx.TE_READONLY
+        )
+        sizer.Add(self.orig_text, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
+
+        quote_label = wx.StaticText(panel, label="&Seu comentário da citação:")
+        sizer.Add(quote_label, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
+
+        self.text_ctrl = wx.TextCtrl(
+            panel,
+            style=wx.TE_MULTILINE | wx.TE_PROCESS_ENTER
+        )
+        sizer.Add(self.text_ctrl, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
+
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.quote_btn = wx.Button(panel, wx.ID_OK, label="&Publicar Citação")
+        self.quote_btn.SetDefault()
+        btn_sizer.Add(self.quote_btn, 0, wx.RIGHT, 10)
+
+        cancel_btn = wx.Button(panel, wx.ID_CANCEL, label="&Cancelar")
+        btn_sizer.Add(cancel_btn, 0)
+
+        sizer.Add(btn_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
+        panel.SetSizer(sizer)
+
+        self.text_ctrl.Bind(wx.EVT_TEXT, self._on_text_changed)
+        self.Bind(wx.EVT_BUTTON, self._on_submit, id=wx.ID_OK)
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
+
+        wx.CallAfter(self.text_ctrl.SetFocus)
+
+    def _on_text_changed(self, event):
+        length = len(self.text_ctrl.GetValue())
+        remaining = self.MAX_CHARS - length
+        if remaining >= 0:
+            self.SetTitle(f"Citar publicação de @{self.post.author_username} ({remaining} restantes)")
+            self.quote_btn.Enable(length > 0)
+        else:
+            self.SetTitle(f"Citar publicação de @{self.post.author_username} ({abs(remaining)} caracteres a mais!)")
+            self.quote_btn.Enable(False)
+
+    def _on_submit(self, event):
+        text = self.text_ctrl.GetValue().strip()
+        if not text:
+            wx.MessageBox("Digite seu comentário para a citação.", "Aviso", wx.OK | wx.ICON_WARNING, self)
+            return
+        if len(text) > self.MAX_CHARS:
+            wx.MessageBox("O comentário excede o limite de caracteres.", "Limite excedido", wx.OK | wx.ICON_WARNING, self)
+            return
+        self.text_content = text
+        self.EndModal(wx.ID_OK)
+
+    def _on_char_hook(self, event):
+        key = event.GetKeyCode()
+        ctrl = event.ControlDown()
+        if ctrl and key in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+            self._on_submit(event)
+        elif key == wx.WXK_ESCAPE:
+            self.EndModal(wx.ID_CANCEL)
+        else:
+            event.Skip()
+
+    def get_text(self) -> str:
+        return self.text_content
+
+
+class RetweetChoiceDialog(wx.Dialog):
+    """
+    Diálogo acessível para o usuário decidir entre Repostar diretamente ou Citar com comentário.
+    """
+    def __init__(self, parent: wx.Window, post: Post):
+        super().__init__(
+            parent,
+            title=f"Repostar - {post.author_name}",
+            size=(480, 190),
+            style=wx.DEFAULT_DIALOG_STYLE
+        )
+        self.post = post
+        self._init_ui()
+        self.CenterOnParent()
+
+    def _init_ui(self):
+        panel = wx.Panel(self)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        msg = wx.StaticText(
+            panel,
+            label=f"Deseja repostar diretamente a publicação de {self.post.author_name} (@{self.post.author_username}) ou adicionar um comentário?"
+        )
+        sizer.Add(msg, 0, wx.ALL, 15)
+
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.retweet_btn = wx.Button(panel, wx.ID_YES, label="&Repostar Diretamente")
+        self.retweet_btn.SetDefault()
+        btn_sizer.Add(self.retweet_btn, 0, wx.RIGHT, 10)
+
+        quote_btn = wx.Button(panel, wx.ID_NO, label="&Citar com Comentário...")
+        btn_sizer.Add(quote_btn, 0, wx.RIGHT, 10)
+
+        cancel_btn = wx.Button(panel, wx.ID_CANCEL, label="&Cancelar")
+        btn_sizer.Add(cancel_btn, 0)
+
+        sizer.Add(btn_sizer, 0, wx.ALIGN_RIGHT | wx.LEFT | wx.RIGHT | wx.BOTTOM, 15)
+        panel.SetSizer(sizer)
+
+        self.Bind(wx.EVT_BUTTON, lambda e: self.EndModal(wx.ID_YES), id=wx.ID_YES)
+        self.Bind(wx.EVT_BUTTON, lambda e: self.EndModal(wx.ID_NO), id=wx.ID_NO)
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
+
+        wx.CallAfter(self.retweet_btn.SetFocus)
+
+    def _on_char_hook(self, event):
+        if event.GetKeyCode() == wx.WXK_ESCAPE:
+            self.EndModal(wx.ID_CANCEL)
+        else:
+            event.Skip()
+
+
+class SendDMDialog(wx.Dialog):
+    """
+    Diálogo acessível para envio de mensagem direta (DM) no X.
+    """
+    def __init__(self, parent: wx.Window, initial_recipient: str = ""):
+        super().__init__(
+            parent,
+            title="Enviar Mensagem Direta (DM)",
+            size=(560, 360),
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
+        )
+        self.initial_recipient = initial_recipient.lstrip("@")
+        self.recipient_value = ""
+        self.message_value = ""
+        self._init_ui()
+        self.CenterOnParent()
+
+    def _init_ui(self):
+        panel = wx.Panel(self)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        user_label = wx.StaticText(panel, label="&Destinatário (nome de usuário sem @):")
+        sizer.Add(user_label, 0, wx.LEFT | wx.RIGHT | wx.TOP, 10)
+
+        self.recipient_ctrl = wx.TextCtrl(panel, value=self.initial_recipient)
+        sizer.Add(self.recipient_ctrl, 0, wx.EXPAND | wx.ALL, 10)
+
+        msg_label = wx.StaticText(panel, label="&Mensagem privada:")
+        sizer.Add(msg_label, 0, wx.LEFT | wx.RIGHT, 10)
+
+        self.message_ctrl = wx.TextCtrl(
+            panel,
+            style=wx.TE_MULTILINE | wx.TE_PROCESS_ENTER
+        )
+        sizer.Add(self.message_ctrl, 1, wx.EXPAND | wx.ALL, 10)
+
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.send_btn = wx.Button(panel, wx.ID_OK, label="&Enviar DM")
+        self.send_btn.SetDefault()
+        btn_sizer.Add(self.send_btn, 0, wx.RIGHT, 10)
+
+        cancel_btn = wx.Button(panel, wx.ID_CANCEL, label="&Cancelar")
+        btn_sizer.Add(cancel_btn, 0)
+
+        sizer.Add(btn_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
+        panel.SetSizer(sizer)
+
+        self.Bind(wx.EVT_BUTTON, self._on_submit, id=wx.ID_OK)
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
+
+        # Se já tem destinatário, foca na mensagem; senão, no destinatário
+        if self.initial_recipient:
+            wx.CallAfter(self.message_ctrl.SetFocus)
+        else:
+            wx.CallAfter(self.recipient_ctrl.SetFocus)
+
+    def _on_submit(self, event):
+        recipient = self.recipient_ctrl.GetValue().lstrip("@").strip()
+        text = self.message_ctrl.GetValue().strip()
+
+        if not recipient:
+            wx.MessageBox("Informe o nome de usuário do destinatário.", "Aviso", wx.OK | wx.ICON_WARNING, self)
+            self.recipient_ctrl.SetFocus()
+            return
+
+        if not text:
+            wx.MessageBox("Digite o texto da mensagem direta.", "Aviso", wx.OK | wx.ICON_WARNING, self)
+            self.message_ctrl.SetFocus()
+            return
+
+        self.recipient_value = recipient
+        self.message_value = text
+        self.EndModal(wx.ID_OK)
+
+    def _on_char_hook(self, event):
+        key = event.GetKeyCode()
+        ctrl = event.ControlDown()
+        if ctrl and key in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+            self._on_submit(event)
+        elif key == wx.WXK_ESCAPE:
+            self.EndModal(wx.ID_CANCEL)
+        else:
+            event.Skip()
+
+    def get_data(self) -> tuple[str, str]:
+        return self.recipient_value, self.message_value
+

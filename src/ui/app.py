@@ -10,6 +10,7 @@ import wx
 from src.core.models import Post
 from src.core.timeline_store import TimelineStore
 from src.platforms.x_twitter.reader import XTimelineReader
+from src.platforms.x_twitter.executor import XActionExecutor
 from src.ui.main_window import MainWindow
 
 logger = logging.getLogger("AccessibleTimeline.App")
@@ -28,11 +29,13 @@ class AccessibleTimelineApp(wx.App):
         }
 
         self.reader = XTimelineReader()
+        self.executor = XActionExecutor(browser_manager=self.reader.browser_manager)
 
-        # Janela principal com a Árvore de fluxos e a Lista acessível
+        # Janela principal com a Árvore de fluxos, a Lista acessível e o Executor de Ações
         self.main_window = MainWindow(
             stores=self.stores,
-            reader=self.reader
+            reader=self.reader,
+            executor=self.executor
         )
         self.SetTopWindow(self.main_window)
         self.main_window.Show()

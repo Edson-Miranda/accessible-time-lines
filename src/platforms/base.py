@@ -52,21 +52,40 @@ class BaseTimelineReader(ABC):
 class BaseActionExecutor(ABC):
     """
     Componente responsável exclusivamente por executar ações no serviço
-    (curtir, repostar, responder, publicar).
+    (publicar, responder, repostar, citar, curtir, descurtir, enviar DM).
     Completamente desacoplado do leitor de timeline.
     """
     @abstractmethod
-    def like_post(self, post_id: str) -> bool:
+    def create_post(self, text: str) -> bool:
+        """Publica um novo post/tweet."""
+        pass
+
+    @abstractmethod
+    def reply_to_post(self, post_id: str, text: str, author_username: str = "") -> bool:
+        """Envia uma resposta a uma publicação existente."""
         pass
 
     @abstractmethod
     def retweet_post(self, post_id: str) -> bool:
+        """Reposta (retweet simples) uma publicação."""
         pass
 
     @abstractmethod
-    def reply_to_post(self, post_id: str, text: str) -> bool:
+    def quote_post(self, post_id: str, text: str, tweet_url: str = "") -> bool:
+        """Reposta com comentário (citar tweet)."""
         pass
 
     @abstractmethod
-    def create_post(self, text: str) -> bool:
+    def like_post(self, post_id: str) -> bool:
+        """Curte uma publicação."""
+        pass
+
+    @abstractmethod
+    def unlike_post(self, post_id: str) -> bool:
+        """Remove a curtida (descurtir) de uma publicação."""
+        pass
+
+    @abstractmethod
+    def send_dm(self, recipient_username: str, text: str) -> bool:
+        """Envia uma mensagem direta (DM) privada para um usuário."""
         pass

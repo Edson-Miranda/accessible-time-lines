@@ -43,3 +43,8 @@ x_profile/
 
 # Logs
 *.log
+*.tmp
+
+# Reference materials
+tw blue/
+tw blue*/

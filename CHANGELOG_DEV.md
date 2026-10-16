@@ -1,3 +1,41 @@
+## [0.1.0-dev.8] - 2026-10-16
+
+### Adicionado
+- **Camada de Execução de Ações (`src/platforms/x_twitter/executor.py`)**:
+  - Implementação completa de `XActionExecutor` herdando de `BaseActionExecutor` (`src/platforms/base.py`).
+  - Métodos desacoplados e resilientes para:
+    - Postar novo tweet (`create_post`)
+    - Responder publicação (`reply_to_post`)
+    - Repostar / Retweet simples (`retweet_post`)
+    - Repostar com comentário / Citar (`quote_post`)
+    - Curtir (`like_post`) e Descurtir (`unlike_post`)
+    - Enviar mensagem direta privada (`send_dm`)
+  - Suporte a despacho assíncrono thread-safe (`run_async`) com retorno para a thread principal de UI via `wx.CallAfter`.
+- **Automação Humana 1:1 no Chromium (`src/platforms/x_twitter/browser.py`)**:
+  - Métodos dedicados `_do_create_post`, `_do_reply_to_post`, `_do_retweet_post`, `_do_quote_post`, `_do_like_post`, `_do_unlike_post` e `_do_send_dm` executados em segundo plano com relatórios de status em tempo real.
+- **Diálogos Acessíveis Inspirados no TWBlue (`src/ui/dialogs.py`)**:
+  - `NewPostDialog`: Composição de tweet com contagem dinâmica regressiva de 280 caracteres e atalho `Ctrl+Enter` para envio direto.
+  - `ReplyDialog`: Resposta com consulta acessível do tweet original e atalho `Ctrl+Enter`.
+  - `QuoteDialog`: Citação com campo de comentário e atalho `Ctrl+Enter`.
+  - `RetweetChoiceDialog`: Diálogo acessível para escolha rápida entre repostar direto ou citar.
+  - `SendDMDialog`: Diálogo para mensagem direta com campos de destinatário e mensagem privada.
+- **Menu e Atalhos Rápidos na Interface Principal (`src/ui/main_window.py`)**:
+  - Novo menu **Ações** no MenuBar.
+  - Atalhos operáveis por teclado:
+    - `Ctrl + N`: Nova publicação.
+    - `Ctrl + R`: Responder.
+    - `Ctrl + Shift + R`: Repostar / Retweet.
+    - `Ctrl + Shift + C`: Citar com comentário.
+    - `Ctrl + L` ou tecla `L`: Curtir / Descurtir.
+    - `Ctrl + D`: Enviar Mensagem Direta.
+- **Configuração de Ambiente**:
+  - Adicionado `tw blue/` e variações ao `.gitignore`.
+
+### Testes
+- Adicionados 7 novos testes unitários em `tests/test_executor.py` cobrindo todas as ações da camada de execução (`create_post`, `reply_to_post`, `retweet_post`, `quote_post`, `like_post`, `unlike_post`, `send_dm`). Suíte completa com 14 testes passando.
+
+---
+
 ## [0.1.0-dev.7] - 2026-10-16
 
 ### Adicionado

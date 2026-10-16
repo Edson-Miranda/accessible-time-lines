@@ -14,7 +14,16 @@ import wx
 from src.core.models import Post
 from src.core.timeline_store import TimelineStore
 from src.platforms.x_twitter.reader import XTimelineReader
-from src.ui.dialogs import PostDetailsDialog, SelectLinkDialog
+from src.platforms.x_twitter.executor import XActionExecutor
+from src.ui.dialogs import (
+    PostDetailsDialog,
+    SelectLinkDialog,
+    NewPostDialog,
+    ReplyDialog,
+    QuoteDialog,
+    RetweetChoiceDialog,
+    SendDMDialog,
+)
 
 logger = logging.getLogger("AccessibleTimeline.MainWindow")
 
@@ -33,7 +42,12 @@ def _is_win_key_down() -> bool:
 
 
 class MainWindow(wx.Frame):
-    def __init__(self, stores: Dict[str, TimelineStore], reader: XTimelineReader):
+    def __init__(
+        self,
+        stores: Dict[str, TimelineStore],
+        reader: XTimelineReader,
+        executor: Optional[XActionExecutor] = None
+    ):
         super().__init__(
             parent=None,
             id=wx.ID_ANY,
@@ -44,6 +58,7 @@ class MainWindow(wx.Frame):
 
         self.stores = stores
         self.reader = reader
+        self.executor = executor or XActionExecutor(reader.browser_manager)
         self._active_stream = "for_you"
         self._updating_list = False
 
@@ -74,6 +89,18 @@ class MainWindow(wx.Frame):
         item_exit = timeline_menu.Append(wx.ID_EXIT, "Sai&r\tAlt+F4", "Fecha o Accessible Timeline")
         menu_bar.Append(timeline_menu, "&Timeline")
 
+        # Menu Ações
+        actions_menu = wx.Menu()
+        item_new_post = actions_menu.Append(wx.ID_ANY, "&Nova Publicação...\tCtrl+N", "Compor e publicar um novo tweet")
+        item_reply = actions_menu.Append(wx.ID_ANY, "&Responder...\tCtrl+R", "Responder à publicação selecionada")
+        item_retweet = actions_menu.Append(wx.ID_ANY, "Re&postar...\tCtrl+Shift+R", "Repostar ou citar a publicação selecionada")
+        item_quote = actions_menu.Append(wx.ID_ANY, "Repostar com &Comentário (Citar)...\tCtrl+Shift+C", "Citar a publicação selecionada com comentário")
+        actions_menu.AppendSeparator()
+        item_like = actions_menu.Append(wx.ID_ANY, "&Curtir / Descurtir\tCtrl+L", "Curte ou remove a curtida da publicação selecionada")
+        actions_menu.AppendSeparator()
+        item_dm = actions_menu.Append(wx.ID_ANY, "Enviar &Mensagem Direta (DM)...\tCtrl+D", "Envia uma mensagem direta para o autor da publicação")
+        menu_bar.Append(actions_menu, "&Ações")
+
         # Menu Ajuda
         help_menu = wx.Menu()
         item_about = help_menu.Append(wx.ID_ABOUT, "&Sobre\tF1", "Informações sobre o aplicativo")
@@ -85,6 +112,12 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_load_more, item_load_more)
         self.Bind(wx.EVT_MENU, self._on_open_details, item_details)
         self.Bind(wx.EVT_MENU, self._on_open_link, item_open_link)
+        self.Bind(wx.EVT_MENU, self._on_new_post, item_new_post)
+        self.Bind(wx.EVT_MENU, self._on_reply, item_reply)
+        self.Bind(wx.EVT_MENU, self._on_retweet, item_retweet)
+        self.Bind(wx.EVT_MENU, self._on_quote, item_quote)
+        self.Bind(wx.EVT_MENU, self._on_toggle_like, item_like)
+        self.Bind(wx.EVT_MENU, self._on_send_dm, item_dm)
         self.Bind(wx.EVT_MENU, self._on_about, item_about)
         self.Bind(wx.EVT_MENU, lambda e: self.Close(), item_exit)
 
@@ -247,6 +280,44 @@ class MainWindow(wx.Frame):
             self._cycle_stream(forward=not shift)
             return
 
+        shift = event.ShiftDown()
+
+        # Atalhos de Ações (TWBlue / The Qube):
+        # Ctrl + N: Nova publicação
+        if ctrl and not shift and not win and key in (ord('N'), ord('n')):
+            self._on_new_post(None)
+            return
+
+        # Ctrl + R: Responder
+        if ctrl and not shift and not win and key in (ord('R'), ord('r')):
+            self._on_reply(None)
+            return
+
+        # Ctrl + Shift + R: Repostar / Retweet
+        if ctrl and shift and not win and key in (ord('R'), ord('r')):
+            self._on_retweet(None)
+            return
+
+        # Ctrl + Shift + C: Citar com comentário
+        if ctrl and shift and not win and key in (ord('C'), ord('c')):
+            self._on_quote(None)
+            return
+
+        # Ctrl + D: Enviar Mensagem Direta (DM)
+        if ctrl and not shift and not win and key in (ord('D'), ord('d')):
+            self._on_send_dm(None)
+            return
+
+        # Ctrl + L ou tecla L (na lista): Curtir / Descurtir
+        if ctrl and not shift and not win and key in (ord('L'), ord('l')):
+            self._on_toggle_like(None)
+            return
+        elif not ctrl and not shift and not win and key in (ord('L'), ord('l')):
+            focused = wx.Window.FindFocus()
+            if focused == self.list_ctrl:
+                self._on_toggle_like(None)
+                return
+
         # Atalho Ctrl + Enter (ou Ctrl + Numpad Enter) para abrir links no navegador
         if ctrl and key in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
             self._on_open_link(None)
@@ -329,6 +400,150 @@ class MainWindow(wx.Frame):
             dlg.Destroy()
             self.list_ctrl.SetFocus()
 
+    def _on_new_post(self, event=None):
+        """Abre o diálogo acessível para compor e publicar um novo tweet."""
+        dlg = NewPostDialog(self)
+        if dlg.ShowModal() == wx.ID_OK:
+            text = dlg.get_text()
+            if text:
+                self.status_bar.SetStatusText("Enviando publicação para o X...")
+                self.executor.run_async(
+                    lambda: self.executor.create_post(text),
+                    on_success=lambda: self.set_status_message("Publicação enviada com sucesso!"),
+                    on_error=lambda: self.set_status_message("Falha ao enviar publicação. Tente novamente.")
+                )
+        dlg.Destroy()
+        self.list_ctrl.SetFocus()
+
+    def _on_reply(self, event=None):
+        """Abre o diálogo para responder à publicação selecionada."""
+        store = self.stores.get(self._active_stream)
+        post = store.get_current_post() if store else None
+        if not post:
+            sel = self.list_ctrl.GetFirstSelected()
+            if sel != -1 and store:
+                post = store.get_post(sel)
+
+        if not post:
+            wx.Bell()
+            self.status_bar.SetStatusText("Nenhuma publicação selecionada para responder.")
+            return
+
+        dlg = ReplyDialog(self, post)
+        if dlg.ShowModal() == wx.ID_OK:
+            text = dlg.get_text()
+            if text:
+                self.status_bar.SetStatusText(f"Enviando resposta para @{post.author_username}...")
+                self.executor.run_async(
+                    lambda: self.executor.reply_to_post(post.id, text, post.author_username),
+                    on_success=lambda: self.set_status_message(f"Resposta enviada para @{post.author_username} com sucesso!"),
+                    on_error=lambda: self.set_status_message(f"Falha ao enviar resposta para @{post.author_username}.")
+                )
+        dlg.Destroy()
+        self.list_ctrl.SetFocus()
+
+    def _on_retweet(self, event=None):
+        """Abre o diálogo de escolha entre repostar direto ou citar com comentário."""
+        store = self.stores.get(self._active_stream)
+        post = store.get_current_post() if store else None
+        if not post:
+            sel = self.list_ctrl.GetFirstSelected()
+            if sel != -1 and store:
+                post = store.get_post(sel)
+
+        if not post:
+            wx.Bell()
+            self.status_bar.SetStatusText("Nenhuma publicação selecionada para repostar.")
+            return
+
+        choice_dlg = RetweetChoiceDialog(self, post)
+        result = choice_dlg.ShowModal()
+        choice_dlg.Destroy()
+
+        if result == wx.ID_YES:
+            # Repostar diretamente
+            self.status_bar.SetStatusText(f"Repostando publicação de @{post.author_username}...")
+            self.executor.run_async(
+                lambda: self.executor.retweet_post(post.id),
+                on_success=lambda: self.set_status_message(f"Publicação de @{post.author_username} repostada com sucesso!"),
+                on_error=lambda: self.set_status_message("Falha ao repostar publicação.")
+            )
+            self.list_ctrl.SetFocus()
+        elif result == wx.ID_NO:
+            # Citar com comentário
+            self._on_quote(None)
+
+    def _on_quote(self, event=None):
+        """Abre o diálogo para citar a publicação selecionada com comentário."""
+        store = self.stores.get(self._active_stream)
+        post = store.get_current_post() if store else None
+        if not post:
+            sel = self.list_ctrl.GetFirstSelected()
+            if sel != -1 and store:
+                post = store.get_post(sel)
+
+        if not post:
+            wx.Bell()
+            self.status_bar.SetStatusText("Nenhuma publicação selecionada para citar.")
+            return
+
+        dlg = QuoteDialog(self, post)
+        if dlg.ShowModal() == wx.ID_OK:
+            comment = dlg.get_text()
+            if comment:
+                self.status_bar.SetStatusText(f"Publicando citação de @{post.author_username}...")
+                self.executor.run_async(
+                    lambda: self.executor.quote_post(post.id, comment, post.url),
+                    on_success=lambda: self.set_status_message("Citação publicada com sucesso!"),
+                    on_error=lambda: self.set_status_message("Falha ao publicar citação.")
+                )
+        dlg.Destroy()
+        self.list_ctrl.SetFocus()
+
+    def _on_toggle_like(self, event=None):
+        """Curte a publicação selecionada no X."""
+        store = self.stores.get(self._active_stream)
+        post = store.get_current_post() if store else None
+        if not post:
+            sel = self.list_ctrl.GetFirstSelected()
+            if sel != -1 and store:
+                post = store.get_post(sel)
+
+        if not post:
+            wx.Bell()
+            self.status_bar.SetStatusText("Nenhuma publicação selecionada para curtir.")
+            return
+
+        self.status_bar.SetStatusText(f"Processando curtida para publicação de @{post.author_username}...")
+        self.executor.run_async(
+            lambda: self.executor.like_post(post.id),
+            on_success=lambda: self.set_status_message(f"Publicação de @{post.author_username} curtida com sucesso!"),
+            on_error=lambda: self.set_status_message("Falha ao processar curtida.")
+        )
+
+    def _on_send_dm(self, event=None):
+        """Abre o diálogo para enviar mensagem direta (DM)."""
+        store = self.stores.get(self._active_stream)
+        post = store.get_current_post() if store else None
+        if not post:
+            sel = self.list_ctrl.GetFirstSelected()
+            if sel != -1 and store:
+                post = store.get_post(sel)
+
+        initial_user = post.author_username if post else ""
+        dlg = SendDMDialog(self, initial_recipient=initial_user)
+        if dlg.ShowModal() == wx.ID_OK:
+            recipient, message = dlg.get_data()
+            if recipient and message:
+                self.status_bar.SetStatusText(f"Enviando mensagem direta para @{recipient}...")
+                self.executor.run_async(
+                    lambda: self.executor.send_dm(recipient, message),
+                    on_success=lambda: self.set_status_message(f"Mensagem direta enviada para @{recipient} com sucesso!"),
+                    on_error=lambda: self.set_status_message(f"Falha ao enviar mensagem direta para @{recipient}.")
+                )
+        dlg.Destroy()
+        self.list_ctrl.SetFocus()
+
     def _on_refresh(self, event):
         label = self._get_stream_display_name(self._active_stream)
         self.status_bar.SetStatusText(f"Solicitando atualização de {label} no navegador...")
@@ -342,16 +557,23 @@ class MainWindow(wx.Frame):
         info = (
             "Accessible Timeline\n\n"
             "Cliente acessível para redes sociais projetado para pessoas com deficiência visual.\n"
-            "Fase 1: Suporte a leitura e navegação no X (Twitter) com sessão autenticada.\n\n"
-            "Navegação na Árvore e Lista:\n"
+            "Inspirado no TWBlue e The Qube com foco prioritário em leitores de tela (NVDA e JAWS).\n\n"
+            "Navegação por Teclado:\n"
             "- Árvore (esquerda): Nó da conta com os fluxos Para você, Seguindo, Menções e Mensagens diretas.\n"
             "- Tab / Shift+Tab: Alternar o foco entre a Árvore de fluxos e a Lista de postagens.\n"
             "- Setas Cima / Baixo na lista: Ler publicações do fluxo ativo (leitura do texto completo).\n"
             "- Control + Windows + Setas: Alternar rapidamente entre os fluxos.\n"
             "- Enter: Abrir detalhes completos da postagem.\n"
-            "- Control + Enter: Abrir link no navegador padrão (com diálogo de seleção se houver mais de um link).\n"
+            "- Control + Enter: Abrir link no navegador padrão (com diálogo de seleção para múltiplos links).\n"
             "- F5: Atualizar o fluxo ativo.\n"
-            "- Ctrl+M: Carregar mais postagens."
+            "- Ctrl+M: Carregar mais postagens.\n\n"
+            "Comandos e Ações (Menu Ações ou Atalhos Rápidos):\n"
+            "- Ctrl + N: Nova publicação (Tweet) com contador de caracteres.\n"
+            "- Ctrl + R: Responder à publicação selecionada.\n"
+            "- Ctrl + Shift + R: Repostar diretamente ou citar.\n"
+            "- Ctrl + Shift + C: Repostar com comentário (Citar).\n"
+            "- Ctrl + L ou tecla L: Curtir / Descurtir a publicação selecionada.\n"
+            "- Ctrl + D: Enviar Mensagem Direta (DM) para o autor selecionado."
         )
         wx.MessageBox(info, "Sobre o Accessible Timeline", wx.OK | wx.ICON_INFORMATION, self)
 
