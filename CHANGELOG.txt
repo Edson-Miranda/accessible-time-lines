@@ -2,7 +2,7 @@ Histórico de Atualizações - Accessible Timeline
 Update History - Accessible Timeline
 
 ======================================================================
-[PT-BR] Versão 0.2.1A (16 de outubro de 2026)
+[PT-BR] Versão 0.2.1 (16 de outubro de 2026)
 ======================================================================
 
 * Isolamento Total com Chromium Embutido e Dedicado:
@@ -14,6 +14,9 @@ Update History - Accessible Timeline
 * Alternância Rápida da Janela do Navegador (Ctrl + Shift + B):
   Adicionada a opção no menu Timeline e o atalho de teclado Ctrl + Shift + B para exibir ou ocultar a janela do navegador a qualquer momento, permitindo realizar verificações adicionais de segurança, autenticação em duas etapas (2FA) ou alternar contas com facilidade.
 
+* Verificação Automática de Atualizações em Segundo Plano:
+  O aplicativo agora verifica silenciosamente na inicialização se há novas versões disponíveis no GitHub, além de permitir a checagem manual no menu Ajuda.
+
 * Identidade e Parceria Oficial TechTales Entertainment:
   Créditos da TechTales Entertainment integrados na tela Sobre (F1), manuais e links diretos para a página oficial: https://techtales.com.br.
 
@@ -22,7 +25,7 @@ Update History - Accessible Timeline
 
 
 ======================================================================
-[EN-US] Version 0.2.1A (October 16, 2026)
+[EN-US] Version 0.2.1 (October 16, 2026)
 ======================================================================
 
 * Complete Isolation with Dedicated Embedded Chromium:
@@ -33,6 +36,9 @@ Update History - Accessible Timeline
 
 * Browser Window Toggle Shortcut (Ctrl + Shift + B):
   Added a menu item under Timeline and keyboard shortcut Ctrl + Shift + B to toggle the browser window visibility whenever you need to handle security checks, two-factor authentication (2FA), or switch accounts.
+
+* Background Startup Update Check:
+  The client now silently checks for newer GitHub releases upon startup in the background, in addition to manual checks in the Help menu.
 
 * Official TechTales Entertainment Branding & Support:
   Embedded official TechTales Entertainment credits in the About dialog (F1), user guides, and direct links to the official website: https://techtales.com.br.

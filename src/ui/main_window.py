@@ -76,6 +76,9 @@ class MainWindow(wx.Frame):
 
         self.Center()
 
+        # Verificação automática e silenciosa de atualizações após inicialização
+        wx.CallLater(3500, lambda: self._check_updates_worker(silent=True))
+
     def _create_store_callback(self, stream_id: str):
         return lambda posts, idx: self._on_store_updated(stream_id, posts, idx)
 
@@ -664,9 +667,10 @@ class MainWindow(wx.Frame):
         )
         wx.MessageBox(info, f"Sobre o Accessible Timeline v{__version__}", wx.OK | wx.ICON_INFORMATION, self)
 
-    def _on_check_updates(self, event=None):
+    def _check_updates_worker(self, silent: bool = False):
         """Verifica se há uma nova versão disponível no GitHub Releases."""
-        self.status_bar.SetStatusText("Verificando se há atualizações disponíveis no GitHub...")
+        if not silent:
+            self.status_bar.SetStatusText("Verificando se há atualizações disponíveis no GitHub...")
 
         def _worker():
             info = check_for_updates()
@@ -682,14 +686,19 @@ class MainWindow(wx.Frame):
                     res = wx.MessageBox(msg, "Atualização Disponível", wx.YES_NO | wx.ICON_INFORMATION, self)
                     if res == wx.YES:
                         webbrowser.open(info.get("download_url") or info.get("html_url"))
-                else:
+                elif not silent:
                     msg = f"Você já está utilizando a versão mais recente do Accessible Timeline (v{__version__})."
                     wx.MessageBox(msg, "Nenhuma Atualização Disponível", wx.OK | wx.ICON_INFORMATION, self)
-                self.status_bar.SetStatusText("Pronto.")
+                if not silent:
+                    self.status_bar.SetStatusText("Pronto.")
 
             wx.CallAfter(_ui_result)
 
         threading.Thread(target=_worker, daemon=True, name="CheckUpdatesThread").start()
+
+    def _on_check_updates(self, event=None):
+        """Ação acionada pelo menu Ajuda > Verificar Atualizações..."""
+        self._check_updates_worker(silent=False)
 
     def set_status_message(self, message: str):
         wx.CallAfter(self.status_bar.SetStatusText, message)
