@@ -16,6 +16,7 @@ from src.core.models import Post
 from src.core.timeline_store import TimelineStore
 from src.core.version import __version__
 from src.core.updater import check_for_updates
+from src.core.config import config_manager
 from src.platforms.x_twitter.reader import XTimelineReader
 from src.platforms.x_twitter.executor import XActionExecutor
 from src.audio.manager import sound_manager
@@ -27,6 +28,7 @@ from src.ui.dialogs import (
     QuoteDialog,
     RetweetChoiceDialog,
     SendDMDialog,
+    SettingsDialog,
 )
 
 logger = logging.getLogger("AccessibleTimeline.MainWindow")
@@ -66,6 +68,11 @@ class MainWindow(wx.Frame):
         self._active_stream = "for_you"
         self._updating_list = False
 
+        # Inicializa preferências salvas de áudio
+        sound_manager.enabled = config_manager.get("sound_enabled", True)
+        sound_theme = config_manager.get("sound_theme", "default")
+        sound_manager.set_theme(sound_theme)
+
         self._init_menu()
         self._init_ui()
         self._init_events()
@@ -76,8 +83,9 @@ class MainWindow(wx.Frame):
 
         self.Center()
 
-        # Verificação automática e silenciosa de atualizações após inicialização
-        wx.CallLater(3500, lambda: self._check_updates_worker(silent=True))
+        # Verificação automática e silenciosa de atualizações após inicialização se habilitada
+        if config_manager.get("check_updates_automatically", True):
+            wx.CallLater(3500, lambda: self._check_updates_worker(silent=True))
 
     def _create_store_callback(self, stream_id: str):
         return lambda posts, idx: self._on_store_updated(stream_id, posts, idx)
@@ -128,6 +136,11 @@ class MainWindow(wx.Frame):
         audio_menu.AppendSubMenu(themes_menu, "&Pacote de Sons do TWBlue")
         menu_bar.Append(audio_menu, "Á&udio")
 
+        # Menu Opções
+        options_menu = wx.Menu()
+        item_settings = options_menu.Append(wx.ID_PREFERENCES, "&Configurações...\tCtrl+P", "Preferências e configurações do aplicativo")
+        menu_bar.Append(options_menu, "&Opções")
+
         # Menu Ajuda
         help_menu = wx.Menu()
         item_check_updates = help_menu.Append(wx.ID_ANY, "&Verificar Atualizações...", "Verifica se há uma versão mais recente do Accessible Timeline")
@@ -149,6 +162,7 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_toggle_like, item_like)
         self.Bind(wx.EVT_MENU, self._on_send_dm, item_dm)
         self.Bind(wx.EVT_MENU, self._on_toggle_sound, self.item_sound_enabled)
+        self.Bind(wx.EVT_MENU, self._on_settings, item_settings)
         self.Bind(wx.EVT_MENU, self._on_check_updates, item_check_updates)
         self.Bind(wx.EVT_MENU, self._on_about, item_about)
         self.Bind(wx.EVT_MENU, lambda e: self.Close(), item_exit)
@@ -435,6 +449,7 @@ class MainWindow(wx.Frame):
     def _on_toggle_sound(self, event):
         """Alterna a ativação dos efeitos sonoros do TWBlue."""
         sound_manager.enabled = self.item_sound_enabled.IsChecked()
+        config_manager.set("sound_enabled", sound_manager.enabled)
         state = "ativados" if sound_manager.enabled else "desativados"
         self.set_status_message(f"Efeitos sonoros {state}.")
 
@@ -443,8 +458,18 @@ class MainWindow(wx.Frame):
         theme = self._theme_menu_items.get(event.GetId())
         if theme:
             sound_manager.set_theme(theme)
+            config_manager.set("sound_theme", theme)
             self.set_status_message(f"Pacote de som alterado para: {theme}")
             sound_manager.play_ready()
+
+    def _on_settings(self, event=None):
+        """Abre a janela de configurações do aplicativo."""
+        dlg = SettingsDialog(self)
+        try:
+            dlg.ShowModal()
+        finally:
+            dlg.Destroy()
+        self.list_ctrl.SetFocus()
 
     def _on_new_post(self, event=None):
         """Abre o diálogo acessível para compor e publicar um novo tweet."""
@@ -659,6 +684,8 @@ class MainWindow(wx.Frame):
             "- Ctrl + Shift + C: Repostar com comentário (Citar).\n"
             "- Ctrl + L ou tecla L: Curtir / Descurtir a publicação selecionada.\n"
             "- Ctrl + D: Enviar Mensagem Direta (DM) para o autor selecionado.\n\n"
+            "Opções e Preferências (Menu Opções):\n"
+            "- Ctrl + P: Configurações do aplicativo (ativar / desativar verificação automática de atualizações).\n\n"
             "Efeitos Sonoros (Menu Áudio):\n"
             "- Sons clássicos do TWBlue para ações, notificações e avisos de limite de texto.\n"
             "- Ctrl + Shift + S: Ativar / Desativar efeitos sonoros.\n"

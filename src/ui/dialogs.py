@@ -3,6 +3,7 @@ from typing import List, Optional
 import wx
 from src.core.models import Post
 from src.audio.manager import sound_manager
+from src.core.config import config_manager
 
 
 class SelectLinkDialog(wx.Dialog):
@@ -583,4 +584,66 @@ class SendDMDialog(wx.Dialog):
 
     def get_data(self) -> tuple[str, str]:
         return self.recipient_value, self.message_value
+
+
+class SettingsDialog(wx.Dialog):
+    """
+    Diálogo acessível de configurações do Accessible Timeline.
+    Permite configurar a verificação automática de atualizações e preferências do aplicativo.
+    """
+    def __init__(self, parent: wx.Window):
+        super().__init__(
+            parent,
+            title="Configurações",
+            size=(520, 240),
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
+        )
+        self._init_ui()
+        self.CenterOnParent()
+
+    def _init_ui(self):
+        panel = wx.Panel(self)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        # Grupo Atualizações
+        update_box = wx.StaticBox(panel, label="Atualizações do Aplicativo")
+        update_sizer = wx.StaticBoxSizer(update_box, wx.VERTICAL)
+
+        self.chk_auto_updates = wx.CheckBox(
+            panel,
+            label="&Verificar atualizações automaticamente ao iniciar o aplicativo"
+        )
+        self.chk_auto_updates.SetValue(config_manager.get("check_updates_automatically", True))
+        update_sizer.Add(self.chk_auto_updates, 0, wx.ALL, 10)
+
+        sizer.Add(update_sizer, 0, wx.EXPAND | wx.ALL, 12)
+
+        # Botões de Ação
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.save_btn = wx.Button(panel, wx.ID_OK, label="&Salvar")
+        self.save_btn.SetDefault()
+        btn_sizer.Add(self.save_btn, 0, wx.RIGHT, 10)
+
+        cancel_btn = wx.Button(panel, wx.ID_CANCEL, label="&Cancelar")
+        btn_sizer.Add(cancel_btn, 0)
+
+        sizer.Add(btn_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 12)
+        panel.SetSizer(sizer)
+
+        self.Bind(wx.EVT_BUTTON, self._on_save, id=wx.ID_OK)
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
+        wx.CallAfter(self.chk_auto_updates.SetFocus)
+
+    def _on_save(self, event):
+        auto_check = self.chk_auto_updates.GetValue()
+        config_manager.set("check_updates_automatically", auto_check)
+        self.EndModal(wx.ID_OK)
+
+    def _on_char_hook(self, event):
+        key = event.GetKeyCode()
+        if key == wx.WXK_ESCAPE:
+            self.EndModal(wx.ID_CANCEL)
+        else:
+            event.Skip()
+
 
