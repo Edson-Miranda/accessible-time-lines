@@ -9,10 +9,13 @@ e lista de publicações à direita totalmente operável por teclado.
 import ctypes
 import logging
 from typing import Dict, List, Optional, Tuple
+import threading
 import webbrowser
 import wx
 from src.core.models import Post
 from src.core.timeline_store import TimelineStore
+from src.core.version import __version__
+from src.core.updater import check_for_updates
 from src.platforms.x_twitter.reader import XTimelineReader
 from src.platforms.x_twitter.executor import XActionExecutor
 from src.audio.manager import sound_manager
@@ -52,7 +55,7 @@ class MainWindow(wx.Frame):
         super().__init__(
             parent=None,
             id=wx.ID_ANY,
-            title="Accessible Timeline - X (Twitter)",
+            title=f"Accessible Timeline v{__version__} - X (Twitter)",
             size=(950, 650),
             style=wx.DEFAULT_FRAME_STYLE
         )
@@ -122,6 +125,8 @@ class MainWindow(wx.Frame):
 
         # Menu Ajuda
         help_menu = wx.Menu()
+        item_check_updates = help_menu.Append(wx.ID_ANY, "&Verificar Atualizações...", "Verifica se há uma versão mais recente do Accessible Timeline")
+        help_menu.AppendSeparator()
         item_about = help_menu.Append(wx.ID_ABOUT, "&Sobre\tF1", "Informações sobre o aplicativo")
         menu_bar.Append(help_menu, "A&juda")
 
@@ -138,6 +143,7 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_toggle_like, item_like)
         self.Bind(wx.EVT_MENU, self._on_send_dm, item_dm)
         self.Bind(wx.EVT_MENU, self._on_toggle_sound, self.item_sound_enabled)
+        self.Bind(wx.EVT_MENU, self._on_check_updates, item_check_updates)
         self.Bind(wx.EVT_MENU, self._on_about, item_about)
         self.Bind(wx.EVT_MENU, lambda e: self.Close(), item_exit)
 
@@ -621,7 +627,7 @@ class MainWindow(wx.Frame):
 
     def _on_about(self, event):
         info = (
-            "Accessible Timeline\n\n"
+            f"Accessible Timeline v{__version__}\n\n"
             "Cliente acessível para redes sociais projetado para pessoas com deficiência visual.\n"
             "Inspirado no TWBlue e The Qube com foco prioritário em leitores de tela (NVDA e JAWS).\n\n"
             "Navegação por Teclado:\n"
@@ -645,7 +651,34 @@ class MainWindow(wx.Frame):
             "- Ctrl + Shift + S: Ativar / Desativar efeitos sonoros.\n"
             "- Seleção de temas sonoros: Padrão (TWBlue), Clássico, Qwitter, Magical Fountain, FreakyBlue e FightingGames."
         )
-        wx.MessageBox(info, "Sobre o Accessible Timeline", wx.OK | wx.ICON_INFORMATION, self)
+        wx.MessageBox(info, f"Sobre o Accessible Timeline v{__version__}", wx.OK | wx.ICON_INFORMATION, self)
+
+    def _on_check_updates(self, event=None):
+        """Verifica se há uma nova versão disponível no GitHub Releases."""
+        self.status_bar.SetStatusText("Verificando se há atualizações disponíveis no GitHub...")
+
+        def _worker():
+            info = check_for_updates()
+
+            def _ui_result():
+                if info:
+                    msg = (
+                        f"Uma nova versão do Accessible Timeline está disponível!\n\n"
+                        f"Versão atual: {__version__}\n"
+                        f"Nova versão: {info['latest_version']}\n\n"
+                        f"Deseja abrir a página de download agora?"
+                    )
+                    res = wx.MessageBox(msg, "Atualização Disponível", wx.YES_NO | wx.ICON_INFORMATION, self)
+                    if res == wx.YES:
+                        webbrowser.open(info.get("download_url") or info.get("html_url"))
+                else:
+                    msg = f"Você já está utilizando a versão mais recente do Accessible Timeline (v{__version__})."
+                    wx.MessageBox(msg, "Nenhuma Atualização Disponível", wx.OK | wx.ICON_INFORMATION, self)
+                self.status_bar.SetStatusText("Pronto.")
+
+            wx.CallAfter(_ui_result)
+
+        threading.Thread(target=_worker, daemon=True, name="CheckUpdatesThread").start()
 
     def set_status_message(self, message: str):
         wx.CallAfter(self.status_bar.SetStatusText, message)

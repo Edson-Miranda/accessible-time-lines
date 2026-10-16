@@ -1,3 +1,30 @@
+## [0.1.0-dev.10] - 2026-10-16
+
+### Adicionado
+- **Pipeline de CI/CD para Compilação e Distribuição no GitHub Actions (`.github/workflows/build-release.yml`)**:
+  - Workflow automatizado em runner `windows-latest` para empacotamento com PyInstaller.
+  - Inclusão dos pacotes sonoros `sounds/` e da biblioteca de áudio `bass.dll`.
+  - Geração de pacote portátil compactado `AccessibleTimeline-vX.Y.Z-windows-x64.zip`.
+  - Publicação automática no GitHub Releases ao enviar tags com prefixo `v*`.
+- **Módulo de Metadados de Versão (`src/core/version.py`)**:
+  - Constantes centralizadas `__version__`, `APP_NAME`, `GITHUB_OWNER` e `GITHUB_REPO`.
+  - Exibição da versão na barra de título da janela principal (`MainWindow`) e no diálogo "Sobre".
+- **Verificador de Atualizações Integrado (`src/core/updater.py`)**:
+  - Função assíncrona `check_for_updates` que consulta a API pública do GitHub Releases com tolerância a falhas e timeout.
+  - Parser robusto de tupla de versões semânticas (`parse_version_tuple`).
+  - Item "Verificar Atualizações..." no menu **Ajuda** da janela principal (`MainWindow`), com aviso sonoro/diálogo acessível e botão para abrir a página de download.
+- **Governança de Releases e CI/CD (`AGENTS.md`)**:
+  - Adicionada Seção 9 estabelecendo o protocolo oficial de checklist para criação de releases públicas, geração de tags Git e publicação via GitHub Actions.
+
+### Modificado
+- **Changelog Público (`CHANGELOG.txt`)**:
+  - Consolidada a versão pública **0.2.0** englobando todas as funcionalidades adicionadas desde a versão 0.1.0 (efeitos sonoros do TWBlue, comandos e ações, árvore de fluxos, leitura completa sem truncamento, abertura de links com Ctrl+Enter e pré-carregamento automático).
+
+### Testes
+- Adicionado módulo `tests/test_updater.py` para validação da comparação e ordenação de versões semânticas. Suíte completa com 23 testes passando.
+
+---
+
 ## [0.1.0-dev.9] - 2026-10-16
 
 ### Adicionado

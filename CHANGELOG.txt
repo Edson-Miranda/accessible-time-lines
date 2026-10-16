@@ -1,6 +1,37 @@
 Histórico de Atualizações - Accessible Timeline
 
 ==================================================
+Versão 0.2.0 (16 de outubro de 2026)
+==================================================
+
+* Efeitos Sonoros Clássicos do TWBlue:
+  O cliente agora conta com os sons marcantes do TWBlue reproduzidos com resposta imediata e alta fidelidade via biblioteca de áudio BASS. Há sons para envio de posts, respostas, reposts, curtidas, mensagens diretas, recebimento de novos itens, avisos de limite de texto e alertas de erro.
+  Você pode ativar ou silenciar os sons a qualquer momento com o atalho Ctrl + Shift + S ou escolher entre 6 pacotes sonoros no menu Áudio: Padrão (TWBlue), Clássico, Qwitter, Magical Fountain, FreakyBlue e FightingGames.
+
+* Comandos e Ações Interativas no X (Twitter):
+  Agora é possível interagir diretamente com a rede sem sair da interface acessível, usando o novo menu Ações ou atalhos rápidos do teclado:
+  - Nova publicação: Pressione Ctrl + N para redigir um tweet. O diálogo conta com contador dinâmico regressivo de 280 caracteres e envio com Ctrl + Enter.
+  - Responder: Pressione Ctrl + R para responder à publicação selecionada, com campo de leitura do tweet original.
+  - Repostar e Citar: Pressione Ctrl + Shift + R para escolher entre repostar diretamente ou citar com comentário, ou Ctrl + Shift + C para abrir direto o diálogo de citação.
+  - Curtir e Descurtir: Pressione Ctrl + L ou simplesmente a letra L para curtir ou remover a curtida da publicação selecionada.
+  - Mensagem Direta (DM): Pressione Ctrl + D para enviar uma mensagem privada para o autor selecionado ou digitar um destinatário.
+
+* Navegação por Árvore de Fluxos (Estilo TWBlue / The Qube):
+  A interface foi aprimorada com uma árvore nativa à esquerda que exibe sua conta conectada e seus respectivos fluxos: "Para você", "Seguindo", "Menções" e "Mensagens diretas".
+  - Pressione Tab na árvore para ir direto à lista de publicações do fluxo escolhido.
+  - Pressione Shift + Tab na lista de publicações para voltar à árvore de fluxos.
+  - Pressione Control + Windows + Setas em qualquer lugar do aplicativo para alternar instantaneamente entre os fluxos.
+
+* Leitura Completa nas Setas e Abertura Rápida de Links:
+  - O leitor de telas agora lê todo o conteúdo da publicação simplesmente navegando com as setas para Cima e para Baixo na lista, sem truncamento de texto.
+  - Pressione Control + Enter em qualquer publicação para abrir seus links no navegador padrão. Se houver mais de um link, uma caixa de seleção acessível é exibida para você escolher facilmente qual link deseja abrir.
+
+* Inicialização Otimizada e Pré-carregamento:
+  Ao abrir o programa, todos os fluxos são visitados e pré-carregados automaticamente em segundo plano, evitando listas vazias.
+  O navegador opera de maneira 100% invisível em segundo plano após o login inicial, sem janelas visíveis nem disputa de foco com o leitor de tela.
+
+
+==================================================
 Versão 0.1.0A (14 de outubro de 2026)
 ==================================================
 

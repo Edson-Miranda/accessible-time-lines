@@ -134,3 +134,56 @@ O projeto adota uma separação rigorosa entre **versões internas de desenvolvi
 ### 8.3. Padrão Obrigatório de Mensagens de Commit no Git
 - A cada commit realizado no repositório Git, a mensagem de commit deve replicar exatamente a entrada correspondente da versão que foi registrada no `CHANGELOG_DEV.md` (incluindo o título da versão interna e o detalhamento dos itens modificados, adicionados, corrigidos ou testados).
 
+---
+
+## 9. Governança de Releases Públicas, CI/CD e Atualizações Automáticas
+
+Este protocolo estabelece o fluxo obrigatório e automatizado para o lançamento de novas versões públicas do **Accessible Timeline**.
+
+### 9.1. Gatilho de Lançamento de Release
+O processo de release é estritamente manual e ativado sob comando explícito do usuário, por exemplo:
+> *"lance a release da versão 0.2.0"* ou *"crie a release da versão X.Y.Z"*
+
+### 9.2. Protocolo de Execução Pré-Release (Checklist Obrigatório)
+Ao receber a ordem de release para a versão `X.Y.Z`, o agente deve executar ordenadamente as seguintes etapas:
+1. **Consolidação do Changelog Público (`CHANGELOG.txt`)**:
+   - Consolidar as alterações técnicas relevantes para o usuário final acumuladas desde a última release pública até a versão interna vigente.
+   - Manter o tom caloroso, limpo e altamente descritivo para leitores de tela NVDA e JAWS.
+2. **Sincronização de Metadados de Versão**:
+   - Atualizar a constante `__version__ = "X.Y.Z"` em `src/core/version.py`.
+   - Garantir que a barra de título da janela principal (`MainWindow`) e o diálogo "Sobre" reflitam a nova versão.
+3. **Validação Rigorosa da Suíte de Testes**:
+   - Executar todos os testes unitários (`python -m unittest discover tests`). O processo só pode prosseguir se 100% dos testes forem aprovados.
+4. **Commit de Release no Git**:
+   - Criar o commit de release pública:
+     ```powershell
+     git add -A
+     git commit -m "Release vX.Y.Z"
+     ```
+5. **Criação de Tag Git Anotada**:
+   - Criar a tag correspondente com o prefixo `v`:
+     ```powershell
+     git tag -a vX.Y.Z -m "Accessible Timeline vX.Y.Z"
+     ```
+6. **Publicação no Repositório Remoto**:
+   - Enviar commits e tags para o GitHub:
+     ```powershell
+     git push origin main --tags
+     ```
+
+### 9.3. Pipeline Automatizado de CI/CD (GitHub Actions)
+- O repositório possui o workflow configurado em `.github/workflows/build-release.yml`.
+- **Gatilho**: Ao receber o push de uma tag iniciada em `v*` (ex.: `v0.2.0`), o GitHub Actions:
+  1. Inicializa um runner Windows x64 limpo (`windows-latest`).
+  2. Instala dependências do Python, Playwright Chromium e PyInstaller.
+  3. Executa a suíte de testes unitários para verificação em ambiente isolado.
+  4. Compila o binário standalone e empacota todos os arquivos de recursos (`sounds/`, `bass.dll`, etc.) em um pacote portátil ZIP (`AccessibleTimeline-vX.Y.Z-windows-x64.zip`).
+  5. Cria automaticamente a **Release Oficial no GitHub Releases** associada à tag, anexando o pacote `.zip` e as notas da versão do `CHANGELOG.txt`.
+
+### 9.4. Verificação de Atualizações pelo Próprio Aplicativo (Auto-Updater)
+- O módulo `src/core/updater.py` consulta a API pública do GitHub (`/repos/{owner}/{repo}/releases/latest`).
+- Na interface gráfica (`MainWindow`):
+  - Menu **Ajuda > Verificar Atualizações...**: Compara a versão local em execução com a última tag lançada no GitHub Releases.
+  - Se houver versão mais recente: Exibe diálogo acessível anunciando a nova versão e oferece a abertura imediata do link de download no navegador padrão.
+
+
