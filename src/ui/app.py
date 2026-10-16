@@ -12,6 +12,7 @@ from src.core.timeline_store import TimelineStore
 from src.platforms.x_twitter.reader import XTimelineReader
 from src.platforms.x_twitter.executor import XActionExecutor
 from src.ui.main_window import MainWindow
+from src.audio.manager import sound_manager
 
 logger = logging.getLogger("AccessibleTimeline.App")
 
@@ -40,7 +41,9 @@ class AccessibleTimelineApp(wx.App):
         self.SetTopWindow(self.main_window)
         self.main_window.Show()
 
-        # Roteamento de postagens por fluxo
+        self._has_played_ready = False
+
+        # Roteamento de postagens por fluxo com efeitos sonoros do TWBlue
         def on_posts_received(feed_type: str, posts: List[Post]):
             target = feed_type
             if target in ("home", "for_you"):
@@ -57,9 +60,18 @@ class AccessibleTimelineApp(wx.App):
                 added = store.add_posts(posts, prepend=True)
                 if added > 0:
                     logger.info(f"{added} novas postagens adicionadas ao fluxo '{target}'.")
+                    if target == "mentions":
+                        sound_manager.play_mention_received()
+                    elif target == "dms":
+                        sound_manager.play_dm_received()
+                    else:
+                        sound_manager.play_tweet_received()
 
         def on_status_change(status_text: str):
             self.main_window.set_status_message(status_text)
+            if "Pronto. Publicações carregadas" in status_text and not self._has_played_ready:
+                self._has_played_ready = True
+                sound_manager.play_ready()
 
         def on_account_info(account_label: str):
             self.main_window.set_account_name(account_label)
@@ -78,4 +90,8 @@ class AccessibleTimelineApp(wx.App):
             self.reader.stop()
         except Exception as e:
             logger.error(f"Erro ao finalizar: {e}")
+        try:
+            sound_manager.close()
+        except Exception:
+            pass
         return super().OnExit()

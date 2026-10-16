@@ -2,6 +2,7 @@ import webbrowser
 from typing import List, Optional
 import wx
 from src.core.models import Post
+from src.audio.manager import sound_manager
 
 
 class SelectLinkDialog(wx.Dialog):
@@ -224,6 +225,7 @@ class NewPostDialog(wx.Dialog):
         else:
             self.SetTitle(f"Nova Publicação ({abs(remaining)} caracteres a mais!)")
             self.post_btn.Enable(False)
+            sound_manager.play_max_length()
 
     def _on_submit(self, event):
         text = self.text_ctrl.GetValue().strip()
@@ -320,6 +322,7 @@ class ReplyDialog(wx.Dialog):
         else:
             self.SetTitle(f"Responder a @{self.post.author_username} ({abs(remaining)} caracteres a mais!)")
             self.reply_btn.Enable(False)
+            sound_manager.play_max_length()
 
     def _on_submit(self, event):
         text = self.text_ctrl.GetValue().strip()
@@ -414,6 +417,7 @@ class QuoteDialog(wx.Dialog):
         else:
             self.SetTitle(f"Citar publicação de @{self.post.author_username} ({abs(remaining)} caracteres a mais!)")
             self.quote_btn.Enable(False)
+            sound_manager.play_max_length()
 
     def _on_submit(self, event):
         text = self.text_ctrl.GetValue().strip()

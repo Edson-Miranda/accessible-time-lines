@@ -1,3 +1,39 @@
+## [0.1.0-dev.9] - 2026-10-16
+
+### Adicionado
+- **Motor e Gerenciador de Áudio (`src/audio/manager.py`)**:
+  - Implementação de `SoundManager` singleton com suporte à biblioteca de áudio BASS x64 (`bass.dll`) via `ctypes`.
+  - Reprodução assíncrona, multithread e não bloqueante de arquivos de áudio OGG Vorbis com latência ultrabaixa.
+  - Métodos semânticos para os principais eventos do cliente:
+    - `play_ready`: Sistema inicializado e pré-carregamento concluído.
+    - `play_tweet_sent`: Tweet / publicação enviada com sucesso.
+    - `play_reply_sent`: Resposta enviada com sucesso.
+    - `play_retweet_sent`: Repost / retweet realizado com sucesso.
+    - `play_favourite`: Publicação favoritada/curtida com sucesso.
+    - `play_dm_sent`: Mensagem direta enviada com sucesso.
+    - `play_tweet_received`: Novos tweets recebidos na timeline.
+    - `play_mention_received`: Nova menção recebida.
+    - `play_dm_received`: Nova mensagem direta recebida.
+    - `play_max_length`: Alerta sonoro quando o limite de caracteres é ultrapassado na digitação.
+    - `play_error`: Alerta sonoro de falha em operações assíncronas.
+  - Suporte completo a múltiplos pacotes de som clássicos do TWBlue na pasta `sounds/` (`default`, `classic`, `Qwitter`, `Magical Fountain`, `FreakyBlue`, `FightingGames`) com mecanismo de fallback transparente para o tema padrão.
+- **Menu e Controles de Áudio na Interface Gráfica (`src/ui/main_window.py`)**:
+  - Novo menu **Áudio** na barra de menus principal.
+  - Item com caixa de seleção para ativar/desativar sons globais (atalho `Ctrl + Shift + S`).
+  - Submenu **Temas de Som** com opções de rádio para troca dinâmica entre os 6 pacotes sonoros do TWBlue sem necessidade de reiniciar o aplicativo.
+  - Acionamento integrado dos efeitos sonoros em todas as ações de postagem, resposta, retweet, citação, curtida e envio de DM, além de sons de erro em falhas.
+  - Atualização do diálogo "Sobre" com a documentação dos atalhos e recursos de áudio.
+- **Feedback Sonoro de Notificação e Limite de Texto (`src/ui/app.py`, `src/ui/dialogs.py`)**:
+  - Reprodução de `play_ready` após inicialização completa do navegador e dos fluxos.
+  - Reprodução de sons de recebimento conforme o fluxo atualizado (`tweet_received`, `mention_received`, `dm_received`).
+  - Reprodução de `play_max_length` em `NewPostDialog`, `ReplyDialog` e `QuoteDialog` quando a contagem regressiva de caracteres excede o limite.
+  - Encerramento gracioso do motor BASS com `sound_manager.close()` no encerramento da aplicação.
+
+### Testes
+- Adicionado módulo de testes unitários `tests/test_sound_manager.py` com 8 novos testes cobrindo singleton, troca de temas, resolução de arquivos OGG e fallback, execução não bloqueante de todos os eventos sonoros e modo silencioso. Total da suíte expandido para 22 testes passando.
+
+---
+
 ## [0.1.0-dev.8] - 2026-10-16
 
 ### Adicionado

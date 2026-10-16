@@ -15,6 +15,7 @@ from src.core.models import Post
 from src.core.timeline_store import TimelineStore
 from src.platforms.x_twitter.reader import XTimelineReader
 from src.platforms.x_twitter.executor import XActionExecutor
+from src.audio.manager import sound_manager
 from src.ui.dialogs import (
     PostDetailsDialog,
     SelectLinkDialog,
@@ -101,6 +102,24 @@ class MainWindow(wx.Frame):
         item_dm = actions_menu.Append(wx.ID_ANY, "Enviar &Mensagem Direta (DM)...\tCtrl+D", "Envia uma mensagem direta para o autor da publicação")
         menu_bar.Append(actions_menu, "&Ações")
 
+        # Menu Áudio (Sons do TWBlue)
+        audio_menu = wx.Menu()
+        self.item_sound_enabled = audio_menu.AppendCheckItem(wx.ID_ANY, "Ativar Efeitos &Sonoros\tCtrl+Shift+S", "Liga ou desliga a reprodução dos sons do TWBlue")
+        self.item_sound_enabled.Check(sound_manager.enabled)
+
+        themes_menu = wx.Menu()
+        self._sound_themes = ["default", "classic", "Qwitter", "Magical Fountain", "FreakyBlue", "FightingGames"]
+        self._theme_menu_items = {}
+        for th in self._sound_themes:
+            m_item = themes_menu.AppendRadioItem(wx.ID_ANY, th)
+            if th == sound_manager.theme_name:
+                m_item.Check(True)
+            self._theme_menu_items[m_item.GetId()] = th
+            self.Bind(wx.EVT_MENU, self._on_select_sound_theme, m_item)
+
+        audio_menu.AppendSubMenu(themes_menu, "&Pacote de Sons do TWBlue")
+        menu_bar.Append(audio_menu, "Á&udio")
+
         # Menu Ajuda
         help_menu = wx.Menu()
         item_about = help_menu.Append(wx.ID_ABOUT, "&Sobre\tF1", "Informações sobre o aplicativo")
@@ -118,6 +137,7 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_quote, item_quote)
         self.Bind(wx.EVT_MENU, self._on_toggle_like, item_like)
         self.Bind(wx.EVT_MENU, self._on_send_dm, item_dm)
+        self.Bind(wx.EVT_MENU, self._on_toggle_sound, self.item_sound_enabled)
         self.Bind(wx.EVT_MENU, self._on_about, item_about)
         self.Bind(wx.EVT_MENU, lambda e: self.Close(), item_exit)
 
@@ -400,6 +420,20 @@ class MainWindow(wx.Frame):
             dlg.Destroy()
             self.list_ctrl.SetFocus()
 
+    def _on_toggle_sound(self, event):
+        """Alterna a ativação dos efeitos sonoros do TWBlue."""
+        sound_manager.enabled = self.item_sound_enabled.IsChecked()
+        state = "ativados" if sound_manager.enabled else "desativados"
+        self.set_status_message(f"Efeitos sonoros {state}.")
+
+    def _on_select_sound_theme(self, event):
+        """Altera o pacote de som do TWBlue."""
+        theme = self._theme_menu_items.get(event.GetId())
+        if theme:
+            sound_manager.set_theme(theme)
+            self.set_status_message(f"Pacote de som alterado para: {theme}")
+            sound_manager.play_ready()
+
     def _on_new_post(self, event=None):
         """Abre o diálogo acessível para compor e publicar um novo tweet."""
         dlg = NewPostDialog(self)
@@ -407,11 +441,13 @@ class MainWindow(wx.Frame):
             text = dlg.get_text()
             if text:
                 self.status_bar.SetStatusText("Enviando publicação para o X...")
-                self.executor.run_async(
-                    lambda: self.executor.create_post(text),
-                    on_success=lambda: self.set_status_message("Publicação enviada com sucesso!"),
-                    on_error=lambda: self.set_status_message("Falha ao enviar publicação. Tente novamente.")
-                )
+                def _success():
+                    self.set_status_message("Publicação enviada com sucesso!")
+                    sound_manager.play_tweet_sent()
+                def _error():
+                    self.set_status_message("Falha ao enviar publicação. Tente novamente.")
+                    sound_manager.play_error()
+                self.executor.run_async(lambda: self.executor.create_post(text), on_success=_success, on_error=_error)
         dlg.Destroy()
         self.list_ctrl.SetFocus()
 
@@ -434,10 +470,16 @@ class MainWindow(wx.Frame):
             text = dlg.get_text()
             if text:
                 self.status_bar.SetStatusText(f"Enviando resposta para @{post.author_username}...")
+                def _success():
+                    self.set_status_message(f"Resposta enviada para @{post.author_username} com sucesso!")
+                    sound_manager.play_reply_sent()
+                def _error():
+                    self.set_status_message(f"Falha ao enviar resposta para @{post.author_username}.")
+                    sound_manager.play_error()
                 self.executor.run_async(
                     lambda: self.executor.reply_to_post(post.id, text, post.author_username),
-                    on_success=lambda: self.set_status_message(f"Resposta enviada para @{post.author_username} com sucesso!"),
-                    on_error=lambda: self.set_status_message(f"Falha ao enviar resposta para @{post.author_username}.")
+                    on_success=_success,
+                    on_error=_error
                 )
         dlg.Destroy()
         self.list_ctrl.SetFocus()
@@ -463,10 +505,16 @@ class MainWindow(wx.Frame):
         if result == wx.ID_YES:
             # Repostar diretamente
             self.status_bar.SetStatusText(f"Repostando publicação de @{post.author_username}...")
+            def _success():
+                self.set_status_message(f"Publicação de @{post.author_username} repostada com sucesso!")
+                sound_manager.play_retweet_sent()
+            def _error():
+                self.set_status_message("Falha ao repostar publicação.")
+                sound_manager.play_error()
             self.executor.run_async(
                 lambda: self.executor.retweet_post(post.id),
-                on_success=lambda: self.set_status_message(f"Publicação de @{post.author_username} repostada com sucesso!"),
-                on_error=lambda: self.set_status_message("Falha ao repostar publicação.")
+                on_success=_success,
+                on_error=_error
             )
             self.list_ctrl.SetFocus()
         elif result == wx.ID_NO:
@@ -492,10 +540,16 @@ class MainWindow(wx.Frame):
             comment = dlg.get_text()
             if comment:
                 self.status_bar.SetStatusText(f"Publicando citação de @{post.author_username}...")
+                def _success():
+                    self.set_status_message("Citação publicada com sucesso!")
+                    sound_manager.play_tweet_sent()
+                def _error():
+                    self.set_status_message("Falha ao publicar citação.")
+                    sound_manager.play_error()
                 self.executor.run_async(
                     lambda: self.executor.quote_post(post.id, comment, post.url),
-                    on_success=lambda: self.set_status_message("Citação publicada com sucesso!"),
-                    on_error=lambda: self.set_status_message("Falha ao publicar citação.")
+                    on_success=_success,
+                    on_error=_error
                 )
         dlg.Destroy()
         self.list_ctrl.SetFocus()
@@ -515,10 +569,16 @@ class MainWindow(wx.Frame):
             return
 
         self.status_bar.SetStatusText(f"Processando curtida para publicação de @{post.author_username}...")
+        def _success():
+            self.set_status_message(f"Publicação de @{post.author_username} curtida com sucesso!")
+            sound_manager.play_favourite()
+        def _error():
+            self.set_status_message("Falha ao processar curtida.")
+            sound_manager.play_error()
         self.executor.run_async(
             lambda: self.executor.like_post(post.id),
-            on_success=lambda: self.set_status_message(f"Publicação de @{post.author_username} curtida com sucesso!"),
-            on_error=lambda: self.set_status_message("Falha ao processar curtida.")
+            on_success=_success,
+            on_error=_error
         )
 
     def _on_send_dm(self, event=None):
@@ -536,10 +596,16 @@ class MainWindow(wx.Frame):
             recipient, message = dlg.get_data()
             if recipient and message:
                 self.status_bar.SetStatusText(f"Enviando mensagem direta para @{recipient}...")
+                def _success():
+                    self.set_status_message(f"Mensagem direta enviada para @{recipient} com sucesso!")
+                    sound_manager.play_dm_sent()
+                def _error():
+                    self.set_status_message(f"Falha ao enviar mensagem direta para @{recipient}.")
+                    sound_manager.play_error()
                 self.executor.run_async(
                     lambda: self.executor.send_dm(recipient, message),
-                    on_success=lambda: self.set_status_message(f"Mensagem direta enviada para @{recipient} com sucesso!"),
-                    on_error=lambda: self.set_status_message(f"Falha ao enviar mensagem direta para @{recipient}.")
+                    on_success=_success,
+                    on_error=_error
                 )
         dlg.Destroy()
         self.list_ctrl.SetFocus()
@@ -573,7 +639,11 @@ class MainWindow(wx.Frame):
             "- Ctrl + Shift + R: Repostar diretamente ou citar.\n"
             "- Ctrl + Shift + C: Repostar com comentário (Citar).\n"
             "- Ctrl + L ou tecla L: Curtir / Descurtir a publicação selecionada.\n"
-            "- Ctrl + D: Enviar Mensagem Direta (DM) para o autor selecionado."
+            "- Ctrl + D: Enviar Mensagem Direta (DM) para o autor selecionado.\n\n"
+            "Efeitos Sonoros (Menu Áudio):\n"
+            "- Sons clássicos do TWBlue para ações, notificações e avisos de limite de texto.\n"
+            "- Ctrl + Shift + S: Ativar / Desativar efeitos sonoros.\n"
+            "- Seleção de temas sonoros: Padrão (TWBlue), Clássico, Qwitter, Magical Fountain, FreakyBlue e FightingGames."
         )
         wx.MessageBox(info, "Sobre o Accessible Timeline", wx.OK | wx.ICON_INFORMATION, self)
 
