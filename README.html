@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accessible Timeline - Manual e Guia de Uso / User Guide</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: #1a1a1a;
+      background-color: #fbfbfb;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    h1, h2, h3 {
+      color: #0d47a1;
+    }
+    h1 {
+      border-bottom: 2px solid #0d47a1;
+      padding-bottom: 10px;
+    }
+    h2 {
+      margin-top: 30px;
+      border-bottom: 1px solid #e0e0e0;
+      padding-bottom: 6px;
+    }
+    .lang-nav {
+      background: #e3f2fd;
+      padding: 12px 18px;
+      border-radius: 6px;
+      margin-bottom: 25px;
+      font-weight: bold;
+    }
+    .lang-nav a {
+      color: #0d47a1;
+      text-decoration: underline;
+      margin-right: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    th, td {
+      border: 1px solid #cccccc;
+      padding: 10px 14px;
+      text-align: left;
+    }
+    th {
+      background-color: #f0f4f8;
+      color: #0d47a1;
+    }
+    code, kbd {
+      background: #eee;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      padding: 2px 6px;
+      font-size: 0.95em;
+      font-family: Consolas, monospace;
+    }
+    hr {
+      margin: 40px 0;
+      border: 0;
+      border-top: 2px solid #e0e0e0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" role="main">
+    <nav class="lang-nav" aria-label="Seleção de idioma / Language selection">
+      <span>Idiomas / Languages:</span>
+      <a href="#pt-br">Versão em Português</a>
+      <a href="#en-us">English Version</a>
+    </nav>
+
+    <!-- ==================== SEÇÃO PORTUGUÊS ==================== -->
+    <article id="pt-br" lang="pt-BR">
+      <header>
+        <h1>Accessible Timeline - Cliente Acessível para X (Twitter)</h1>
+        <p><strong>Versão:</strong> 0.2.0 | <strong>Público-alvo:</strong> Pessoas com deficiência visual e usuários de leitores de tela (NVDA e JAWS).</p>
+      </header>
+
+      <section>
+        <h2>Sobre o Projeto</h2>
+        <p>O <strong>Accessible Timeline</strong> é um cliente concebido especificamente para oferecer navegação rápida, linear, desobstruída e 100% operável por teclado, eliminando o atrito das interfaces web modernas. Inspirado no legado consagrado de clientes como <strong>TWBlue</strong> e <strong>The Qube</strong>, o projeto prioriza controles nativos do Windows para uma experiência de fala limpa e sem redundâncias nos leitores de tela.</p>
+      </section>
+
+      <section>
+        <h2>Novidades da Versão 0.2.0</h2>
+        <ul>
+          <li><strong>Efeitos Sonoros do TWBlue:</strong> Sons clássicos para ações de envio, recebimento, curtidas, mensagens diretas, limites de texto e erros, com motor de áudio BASS de baixa latência.</li>
+          <li><strong>6 Temas Sonoros Disponíveis:</strong> Padrão (TWBlue), Clássico, Qwitter, Magical Fountain, FreakyBlue e FightingGames (Menu Áudio ou atalho <code>Ctrl+Shift+S</code>).</li>
+          <li><strong>Interações Completas no X:</strong> Nova postagem (<code>Ctrl+N</code>), responder (<code>Ctrl+R</code>), repostar e citar (<code>Ctrl+Shift+R</code> / <code>Ctrl+Shift+C</code>), curtir/descurtir (<code>Ctrl+L</code> ou tecla <code>L</code>) e mensagens diretas (<code>Ctrl+D</code>).</li>
+          <li><strong>Layout em Árvore Clássico:</strong> Navegação entre fluxos ("Para você", "Seguindo", "Menções" e "Mensagens diretas") via <code>Tab</code>, <code>Shift+Tab</code> e <code>Ctrl+Win+Setas</code>.</li>
+          <li><strong>Leitura Completa nas Setas:</strong> Leitura integral de cada tweet com as setas para Cima e Baixo, sem truncamento.</li>
+          <li><strong>Abertura Rápida de Links:</strong> <code>Control+Enter</code> abre links no navegador padrão, com diálogo de seleção para posts com múltiplos links.</li>
+          <li><strong>Navegador em Modo Invisível:</strong> Operação silenciosa em segundo plano após autenticação e pré-carregamento automático de todas as guias.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Tabela de Atalhos de Teclado</h2>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Atalho / Tecla</th>
+              <th scope="col">Função</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><kbd>Tab</kbd> / <kbd>Shift + Tab</kbd></td>
+              <td>Alterna entre a Árvore de fluxos (esquerda) e a Lista de postagens (direita)</td>
+            </tr>
+            <tr>
+              <td><kbd>Setas Cima / Baixo</kbd> (na Árvore)</td>
+              <td>Percorre os fluxos disponíveis (Para você, Seguindo, Menções, Mensagens diretas)</td>
+            </tr>
+            <tr>
+              <td><kbd>Setas Cima / Baixo</kbd> (na Lista)</td>
+              <td>Lê as publicações do fluxo ativo (o NVDA/JAWS lê o texto completo)</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl + Win + Setas</kbd></td>
+              <td>Alterna instantaneamente de fluxo em qualquer parte do aplicativo</td>
+            </tr>
+            <tr>
+              <td><kbd>Enter</kbd></td>
+              <td>Abre a tela com o conteúdo detalhado da publicação para leitura linha por linha</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl + Enter</kbd></td>
+              <td>Abre o link da publicação no navegador padrão (com diálogo se houver mais de um)</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl + N</kbd></td>
+              <td>Nova publicação com contador regressivo de caracteres</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl + R</kbd></td>
+              <td>Responder à publicação selecionada</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl + Shift + R</kbd></td>
+              <td>Repostar diretamente ou abrir citação com comentário</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl + Shift + C</kbd></td>
+              <td>Repostar com comentário (Citar publicação)</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl + L</kbd> ou <kbd>L</kbd></td>
+              <td>Curtir ou remover curtida da publicação selecionada</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl + D</kbd></td>
+              <td>Enviar mensagem direta (DM) para o autor da publicação</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl + Shift + S</kbd></td>
+              <td>Ativar ou desativar efeitos sonoros</td>
+            </tr>
+            <tr>
+              <td><kbd>F5</kbd></td>
+              <td>Atualizar o fluxo ativo</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl + M</kbd></td>
+              <td>Carregar mais postagens (rolar fluxo)</td>
+            </tr>
+            <tr>
+              <td><kbd>Alt + F4</kbd></td>
+              <td>Fechar o aplicativo</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </article>
+
+    <hr>
+
+    <!-- ==================== SEÇÃO EM INGLÊS ==================== -->
+    <article id="en-us" lang="en-US">
+      <header>
+        <h1>Accessible Timeline - Accessible Client for X (Twitter)</h1>
+        <p><strong>Version:</strong> 0.2.0 | <strong>Audience:</strong> Blind and visually impaired users navigating with NVDA, JAWS, or other screen readers.</p>
+      </header>
+
+      <section>
+        <h2>About the Project</h2>
+        <p><strong>Accessible Timeline</strong> is designed specifically to bring back the fast, clean, and linear social media experience inspired by classical tools like <strong>TWBlue</strong> and <strong>The Qube</strong>. It operates using native Windows controls (Win32), ensuring responsive keyboard interactions, clean screen reader speech without echo or interruptions, and zero web interface friction.</p>
+      </section>
+
+      <section>
+        <h2>What's New in Version 0.2.0</h2>
+        <ul>
+          <li><strong>Classic TWBlue Sound Packs:</strong> Low-latency audio powered by the BASS library for actions (tweets, replies, retweets, likes, DMs, incoming updates, character limit alerts, and errors).</li>
+          <li><strong>6 Audio Themes Included:</strong> Default (TWBlue), Classic, Qwitter, Magical Fountain, FreakyBlue, and FightingGames (toggle via Audio menu or <code>Ctrl+Shift+S</code>).</li>
+          <li><strong>Complete Interactive Actions:</strong> New tweet (<code>Ctrl+N</code>), reply (<code>Ctrl+R</code>), retweet & quote (<code>Ctrl+Shift+R</code> / <code>Ctrl+Shift+C</code>), like/unlike (<code>Ctrl+L</code> or key <code>L</code>), and direct messages (<code>Ctrl+D</code>).</li>
+          <li><strong>Classic TreeView Layout:</strong> Seamless navigation between streams ("For you", "Following", "Mentions", and "Direct Messages") via <code>Tab</code>, <code>Shift+Tab</code>, and <code>Ctrl+Win+Arrows</code>.</li>
+          <li><strong>Full Post Reading on Arrows:</strong> Listen to the entire tweet simply by browsing with Up and Down arrow keys without text truncation.</li>
+          <li><strong>Fast Link Opening:</strong> Press <code>Control+Enter</code> to open post URLs in your default browser, featuring a combo box dialog when multiple links are present.</li>
+          <li><strong>Silent Background Browser:</strong> Headless execution after authentication with automatic background preloading for all tabs.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Keyboard Shortcuts Guide</h2>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Shortcut / Key</th>
+              <th scope="col">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><kbd>Tab</kbd> / <kbd>Shift + Tab</kbd></td>
+              <td>Switch keyboard focus between the Streams Tree (left) and Post List (right)</td>
+            </tr>
+            <tr>
+              <td><kbd>Up / Down Arrows</kbd> (in Tree)</td>
+              <td>Browse through available streams (For you, Following, Mentions, Direct Messages)</td>
+            </tr>
+            <tr>
+              <td><kbd>Up / Down Arrows</kbd> (in List)</td>
+              <td>Read posts in the active stream (screen reader speaks full text)</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl + Win + Arrows</kbd></td>
+              <td>Instantly switch streams from anywhere in the application</td>
+            </tr>
+            <tr>
+              <td><kbd>Enter</kbd></td>
+              <td>Open detailed post dialog for character-by-character or line-by-line inspection</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl + Enter</kbd></td>
+              <td>Open links from selected post in default browser (with chooser dialog for multiple links)</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl + N</kbd></td>
+              <td>Compose a new post with live character countdown</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl + R</kbd></td>
+              <td>Reply to the selected post</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl + Shift + R</kbd></td>
+              <td>Retweet directly or open quote dialog</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl + Shift + C</kbd></td>
+              <td>Quote post with comment</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl + L</kbd> or <kbd>L</kbd></td>
+              <td>Like or unlike the selected post</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl + D</kbd></td>
+              <td>Send Direct Message (DM) to the author</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl + Shift + S</kbd></td>
+              <td>Mute or unmute sound effects</td>
+            </tr>
+            <tr>
+              <td><kbd>F5</kbd></td>
+              <td>Refresh current active stream</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl + M</kbd></td>
+              <td>Load more posts (scroll stream)</td>
+            </tr>
+            <tr>
+              <td><kbd>Alt + F4</kbd></td>
+              <td>Exit application</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </article>
+  </div>
+</body>
+</html>

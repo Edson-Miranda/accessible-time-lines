@@ -146,8 +146,10 @@ O processo de release é estritamente manual e ativado sob comando explícito do
 
 ### 9.2. Protocolo de Execução Pré-Release (Checklist Obrigatório)
 Ao receber a ordem de release para a versão `X.Y.Z`, o agente deve executar ordenadamente as seguintes etapas:
-1. **Consolidação do Changelog Público (`CHANGELOG.txt`)**:
+1. **Consolidação Bilíngue do Changelog e Documentação (`CHANGELOG.txt` e `README.html`)**:
    - Consolidar as alterações técnicas relevantes para o usuário final acumuladas desde a última release pública até a versão interna vigente.
+   - Gerar o `CHANGELOG.txt` estruturado em seções bilíngues: Português ([PT-BR]) e Inglês ([EN-US]).
+   - Gerar/atualizar o manual acessível `README.html` em Português e Inglês com tabela completa de atalhos e instruções para leitores de tela.
    - Manter o tom caloroso, limpo e altamente descritivo para leitores de tela NVDA e JAWS.
 2. **Sincronização de Metadados de Versão**:
    - Atualizar a constante `__version__ = "X.Y.Z"` em `src/core/version.py`.

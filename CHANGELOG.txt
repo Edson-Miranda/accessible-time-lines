@@ -1,8 +1,9 @@
 Histórico de Atualizações - Accessible Timeline
+Update History - Accessible Timeline
 
-==================================================
-Versão 0.2.0 (16 de outubro de 2026)
-==================================================
+======================================================================
+[PT-BR] Versão 0.2.0 (16 de outubro de 2026)
+======================================================================
 
 * Efeitos Sonoros Clássicos do TWBlue:
   O cliente agora conta com os sons marcantes do TWBlue reproduzidos com resposta imediata e alta fidelidade via biblioteca de áudio BASS. Há sons para envio de posts, respostas, reposts, curtidas, mensagens diretas, recebimento de novos itens, avisos de limite de texto e alertas de erro.
@@ -31,9 +32,40 @@ Versão 0.2.0 (16 de outubro de 2026)
   O navegador opera de maneira 100% invisível em segundo plano após o login inicial, sem janelas visíveis nem disputa de foco com o leitor de tela.
 
 
-==================================================
-Versão 0.1.0A (14 de outubro de 2026)
-==================================================
+======================================================================
+[EN-US] Version 0.2.0 (October 16, 2026)
+======================================================================
+
+* Classic TWBlue Sound Effects:
+  The client now features the beloved TWBlue sound packs powered by the low-latency BASS audio engine. Sounds are triggered on sending posts, replies, retweets, likes, direct messages, receiving new timeline events, character limits, and error notifications.
+  You can mute or unmute sound effects at any time using Ctrl + Shift + S or select among 6 sound packs in the Audio menu: Default (TWBlue), Classic, Qwitter, Magical Fountain, FreakyBlue, and FightingGames.
+
+* Interactive Actions and Commands on X (Twitter):
+  Interact directly with X without leaving the accessible interface, using the Actions menu or fast keyboard shortcuts:
+  - New Post: Press Ctrl + N to compose a post with a live 280-character countdown and send with Ctrl + Enter.
+  - Reply: Press Ctrl + R to reply to the selected post, with an accessible view of the original tweet text.
+  - Retweet & Quote: Press Ctrl + Shift + R to choose between direct retweet or quoting with comments, or Ctrl + Shift + C to jump straight to quoting.
+  - Like & Unlike: Press Ctrl + L or simply the letter L to like or unlike the selected post.
+  - Direct Message (DM): Press Ctrl + D to send a private direct message to the author or enter a recipient username.
+
+* Stream Tree Navigation (TWBlue / The Qube Style):
+  The interface has been redesigned with a native Windows TreeView on the left showcasing your connected account and streams: "For you", "Following", "Mentions", and "Direct Messages".
+  - Press Tab in the TreeView to move keyboard focus directly to the active stream post list.
+  - Press Shift + Tab in the post list to return to the streams tree.
+  - Press Control + Windows + Arrow Keys anywhere to switch quickly between streams.
+
+* Full Text Reading with Arrow Keys & Fast Link Opening:
+  - Screen readers now read the complete tweet text without truncation simply by moving Up and Down with arrow keys in the list.
+  - Press Control + Enter on any post to open its links in your default web browser. If a post contains multiple links, an accessible selection dialog lets you choose which one to open.
+
+* Background Preloading & Silent Operation:
+  When the application starts, all streams are visited and preloaded in the background to ensure lists are immediately populated.
+  Once authenticated, the browser runs 100% silently in headless background mode, without extra windows or screen reader focus stealing.
+
+
+======================================================================
+[PT-BR] Versão 0.1.0A (14 de outubro de 2026)
+======================================================================
 
 * Navegação linear pelas publicações do X (antigo Twitter):
   Use as setas para Cima e para Baixo do teclado para percorrer a linha do tempo com agilidade.
@@ -47,5 +79,19 @@ Versão 0.1.0A (14 de outubro de 2026)
 * Atualização da timeline:
   Pressione F5 a qualquer momento para carregar novas postagens. A publicação que você estava lendo permanece selecionada, sem saltos repentinos no cursor.
 
-* Gerenciamento da janela do navegador:
-  Pressione a tecla F11 para exibir a janela do navegador Chromium quando precisar fazer login, autenticação em duas etapas (2FA) ou resolver alguma verificação. Pressione F11 novamente para ocultar a janela do navegador e continuar usando apenas a interface acessível.
+
+======================================================================
+[EN-US] Version 0.1.0A (October 14, 2026)
+======================================================================
+
+* Linear keyboard navigation through X posts:
+  Use Up and Down arrow keys to browse your timeline quickly and smoothly.
+
+* Clean screen reader output in NVDA and JAWS:
+  Native Win32 list control delivers clean announcements (author, handle, relative time, post text, and stats) without double speech.
+
+* Full post details dialog:
+  Press Enter on any post to open a full multi-line read dialog to navigate line-by-line, character-by-character, or copy text.
+
+* Safe timeline refreshing:
+  Press F5 to refresh posts while keeping your current reading position preserved.
