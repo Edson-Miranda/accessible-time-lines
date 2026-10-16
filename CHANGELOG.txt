@@ -17,6 +17,9 @@ Update History - Accessible Timeline
 * Verificação Automática de Atualizações em Segundo Plano:
   O aplicativo agora verifica silenciosamente na inicialização se há novas versões disponíveis no GitHub, além de permitir a checagem manual no menu Ajuda.
 
+* Nova Janela de Configurações (Ctrl + P):
+  Adicionado o menu Opções e a tela de Configurações com caixa de seleção nativa para você ligar ou desligar a verificação automática de atualizações na inicialização, além de salvar suas preferências de temas e efeitos sonoros permanentemente.
+
 * Identidade e Parceria Oficial TechTales Entertainment:
   Créditos da TechTales Entertainment integrados na tela Sobre (F1), manuais e links diretos para a página oficial: https://techtales.com.br.
 
@@ -39,6 +42,9 @@ Update History - Accessible Timeline
 
 * Background Startup Update Check:
   The client now silently checks for newer GitHub releases upon startup in the background, in addition to manual checks in the Help menu.
+
+* New Application Settings Dialog (Ctrl + P):
+  Added the Options menu and an accessible Settings dialog with a native checkbox to enable or disable automatic startup update checks, in addition to permanently persisting your audio and theme preferences.
 
 * Official TechTales Entertainment Branding & Support:
   Embedded official TechTales Entertainment credits in the About dialog (F1), user guides, and direct links to the official website: https://techtales.com.br.
