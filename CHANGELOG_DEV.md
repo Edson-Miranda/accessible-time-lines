@@ -1,3 +1,12 @@
+## [0.1.0-dev.12] - 2026-10-16
+
+### Adicionado
+- **Assinatura e Créditos TechTales Entertainment (`src/ui/main_window.py`, `src/core/version.py`, `README.html`, `README.md`)**:
+  - Inclusão dos créditos de desenvolvimento "Desenvolvido por TechTales Entertainment" e link oficial `https://techtales.com.br` no diálogo "Sobre", metadados de versão e documentação de suporte.
+  - Reset limpo do perfil local de autenticação do X para validação de primeiro acesso e login assistido.
+
+---
+
 ## [0.1.0-dev.11] - 2026-10-16
 
 ### Corrigido

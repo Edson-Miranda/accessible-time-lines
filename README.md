@@ -1,5 +1,7 @@
 # Accessible Timeline
 
+Desenvolvido por **TechTales Entertainment** ([https://techtales.com.br](https://techtales.com.br))
+
 Cliente de timeline acessível para pessoas com deficiência visual e usuários de leitores de tela (NVDA e JAWS), inspirado no legado de clientes consagrados como **TWBlue** e **The Qube**.
 
 Seja muito bem-vindo ao Accessible Timeline! Este projeto nasceu para resgatar a facilidade, a agilidade e a independência que tínhamos com clientes clássicos de redes sociais. Nosso compromisso é entregar uma experiência de navegação rápida, linear e desobstruída, eliminando toda a sobrecarga e o atrito das interfaces web modernas.
