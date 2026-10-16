@@ -45,7 +45,7 @@ jobs:
             --add-data "README.html;." `
             --add-data "CHANGELOG.txt;." `
             --add-binary "src/audio/lib/x64/bass.dll;src/audio/lib/x64" `
-            main.py
+            run.py
 
       - name: Package Distributable Zip
         shell: powershell
