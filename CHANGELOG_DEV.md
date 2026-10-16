@@ -1,3 +1,17 @@
+## [0.1.0-dev.18] - 2026-10-16
+
+### Modificado
+- **Padronização do Nome do Repositório GitHub (`src/core/version.py`)**:
+  - Renomeação bem-sucedida do repositório no GitHub de `Edson-Miranda/accessible-time-lines` para `Edson-Miranda/accessible-timeline`.
+  - Atualização do remote local `origin` para `https://github.com/Edson-Miranda/accessible-timeline.git`.
+  - Atualização da constante `GITHUB_REPO` para `"accessible-timeline"` em `src/core/version.py`, garantindo que o atualizador automático consulte o novo caminho diretamente.
+  - Verificação de compatibilidade retroativa: os redirecionamentos nativos do GitHub preservam a entrega de atualizações para executáveis compilados anteriormente.
+
+### Testes
+- Validação do fluxo de verificação de atualizações (`check_for_updates`) e download via API contra o novo endereço do repositório, com 36 testes unitários aprovados.
+
+---
+
 ## [0.1.0-dev.17] - 2026-10-16
 
 ### Adicionado
