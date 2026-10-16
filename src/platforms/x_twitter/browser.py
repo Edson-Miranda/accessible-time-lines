@@ -55,10 +55,20 @@ class XBrowserManager:
         self._cmd_queue: queue.Queue = queue.Queue()
         self._running = False
         self._account_name: Optional[str] = None
+        self._force_visible = False
+        self._current_headless: Optional[bool] = None
 
         self.on_posts_callback: Optional[Callable[[str, list[Post]], None]] = None
         self.on_status_callback: Optional[Callable[[str], None]] = None
         self.on_account_info_callback: Optional[Callable[[str], None]] = None
+
+    def toggle_browser_window(self):
+        """Alterna a visibilidade da janela do navegador."""
+        self._cmd_queue.put(("toggle_visibility", None))
+
+    def is_browser_visible(self) -> bool:
+        """Indica se o navegador está atualmente em modo com janela visível."""
+        return self._current_headless is False
 
     def _set_status(self, text: str):
         logger.info(f"Status: {text}")
@@ -543,31 +553,78 @@ class XBrowserManager:
 
         self._set_status("Pronto. Publicações carregadas.")
 
+    def _launch_persistent_context_with_fallback(
+        self,
+        pw,
+        headless: bool
+    ) -> BrowserContext:
+        """
+        Inicia o Chromium com estratégia de fallback transparente:
+        1. Microsoft Edge do sistema operacional (channel='msedge')
+        2. Google Chrome (channel='chrome')
+        3. Chromium do Playwright (channel=None)
+        4. Auto-instalação caso nenhum navegador exista
+        """
+        channels_to_try = ["msedge", "chrome", None]
+        common_args = [
+            "--disable-blink-features=AutomationControlled",
+            "--no-first-run",
+            "--no-default-browser-check",
+        ]
+
+        for ch in channels_to_try:
+            try:
+                kwargs = {
+                    "user_data_dir": self.data_dir,
+                    "headless": headless,
+                    "viewport": {"width": 1280, "height": 800},
+                    "args": common_args,
+                }
+                if ch:
+                    kwargs["channel"] = ch
+                ctx = pw.chromium.launch_persistent_context(**kwargs)
+                logger.info(f"Navegador iniciado com sucesso (canal={ch or 'padrão'}, headless={headless})")
+                return ctx
+            except Exception as e:
+                logger.debug(f"Tentativa de iniciar navegador via canal '{ch}' falhou: {e}")
+                continue
+
+        # Se todos os navegadores locais falharem, dispara auto-instalação
+        logger.warning("Nenhum navegador Chromium encontrado. Baixando componentes...")
+        self._set_status("Instalando componentes do navegador pela primeira vez. Por favor, aguarde...")
+        self._auto_install_chromium()
+
+        return pw.chromium.launch_persistent_context(
+            user_data_dir=self.data_dir,
+            headless=headless,
+            viewport={"width": 1280, "height": 800},
+            args=common_args,
+        )
+
+    def _auto_install_chromium(self):
+        """Executa 'playwright install chromium' via subprocess de forma resiliente."""
+        import subprocess
+        import sys
+        try:
+            subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True, timeout=180)
+        except Exception as e:
+            logger.error(f"Falha ao executar auto-instalação do Chromium: {e}")
+
     def _worker_loop(self):
         """Loop executado na thread de segundo plano."""
         while self._running:
             is_authenticated = is_profile_authenticated(self.data_dir)
-            # Uma vez autenticado, roda SEMPRE em modo headless puro (sem janela)
-            headless = is_authenticated
+            headless = is_authenticated and not self._force_visible
+            self._current_headless = headless
 
             if headless:
                 self._set_status("Iniciando motor de acesso ao X (modo em segundo plano)...")
             else:
-                self._set_status("Aguardando login no navegador. Por favor, acerte seu login na janela aberta...")
+                self._set_status("Aguardando login no navegador. Por favor, faça login na janela aberta...")
 
             with sync_playwright() as pw:
                 try:
-                    context: BrowserContext = pw.chromium.launch_persistent_context(
-                        user_data_dir=self.data_dir,
-                        headless=headless,
-                        viewport={"width": 1280, "height": 800},
-                        args=[
-                            "--disable-blink-features=AutomationControlled",
-                            "--no-first-run",
-                            "--no-default-browser-check",
-                        ],
-                    )
-
+                    context: BrowserContext = self._launch_persistent_context_with_fallback(pw, headless=headless)
                     context.on("response", self._handle_response)
                     page: Page = context.pages[0] if context.pages else context.new_page()
 
@@ -576,20 +633,22 @@ class XBrowserManager:
                     except Exception as e:
                         logger.warning(f"Aviso no carregamento inicial: {e}")
 
-                    # Se estava com janela aberta para login, monitora até o login ser concluído
-                    if not headless:
+                    # Se estava com janela aberta para login inicial (não forçada manualmente)
+                    if not headless and not self._force_visible:
                         logged_in = False
-                        while self._running and not logged_in:
+                        while self._running and not logged_in and not self._force_visible:
                             time.sleep(1.5)
-                            cookies = context.cookies()
-                            for c in cookies:
-                                if c.get("name") == "auth_token":
-                                    logged_in = True
-                                    break
+                            try:
+                                cookies = context.cookies()
+                                for c in cookies:
+                                    if c.get("name") == "auth_token":
+                                        logged_in = True
+                                        break
+                            except Exception:
+                                pass
                         if logged_in:
-                            self._set_status("Login concluído com sucesso! Ocultando navegador permanentemente...")
+                            self._set_status("Login concluído com sucesso! Ocultando navegador...")
                             context.close()
-                            # Reinicia o loop agora com headless=True permanente
                             continue
 
                     self._detect_account_info(page)
@@ -602,7 +661,14 @@ class XBrowserManager:
                         try:
                             cmd, arg = self._cmd_queue.get(timeout=0.2)
                             if cmd == "stop":
+                                context.close()
                                 return
+                            elif cmd == "toggle_visibility":
+                                self._force_visible = not self._force_visible
+                                status_txt = "Abrindo janela do navegador..." if self._force_visible else "Ocultando janela do navegador..."
+                                self._set_status(status_txt)
+                                context.close()
+                                break
                             elif cmd == "switch_tab":
                                 feed_name = arg
                                 self._set_status(f"Acessando fluxo {feed_name}...")
@@ -651,7 +717,10 @@ class XBrowserManager:
 
                         time.sleep(0.05)
 
-                    context.close()
+                    try:
+                        context.close()
+                    except Exception:
+                        pass
                 except Exception as e:
                     logger.error(f"Erro no motor do navegador: {e}")
                     self._set_status(f"Erro no navegador: {e}")

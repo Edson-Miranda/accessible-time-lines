@@ -49,3 +49,11 @@ class XTimelineReader(BaseTimelineReader):
     def navigate_to(self, url: str):
         """Comanda o navegador a acessar uma URL específica."""
         self.browser_manager.navigate_to(url)
+
+    def toggle_browser_window(self):
+        """Alterna a exibição da janela do navegador para login manual ou inspeção."""
+        self.browser_manager.toggle_browser_window()
+
+    def is_browser_visible(self) -> bool:
+        """Indica se a janela do navegador está atualmente visível."""
+        return self.browser_manager.is_browser_visible()
