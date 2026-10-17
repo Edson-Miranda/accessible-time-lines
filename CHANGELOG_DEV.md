@@ -1,3 +1,42 @@
+## [0.1.0-dev.20] - 2026-10-17
+
+### Adicionado
+- **Integração de Fala Direta para NVDA e Leitores de Tela (`src/audio/speech.py`, `src/audio/lib/x64/`)**:
+  - Inclusão das bibliotecas clientes oficiais do NVDA (`nvdaControllerClient.dll` e `nvdaControllerClient64.dll`).
+  - Implementação de `SpeechManager` integrando `accessible_output2` e direct call ao NVDA Controller Client com suporte aos métodos `speak(text, interrupt)` e `silence()`.
+  - Anúncio sonoro e vocal automático de alterações na barra de status e chegada de novas menções via leitor de tela sem roubo de foco.
+- **Gestão de Usuários no X (`src/platforms/base.py`, `src/platforms/x_twitter/browser.py`, `src/platforms/x_twitter/executor.py`, `src/ui/dialogs.py`, `src/ui/main_window.py`)**:
+  - Implementação dos métodos de controle social: seguir (`follow_user`), deixar de seguir (`unfollow_user`) e bloquear usuário (`block_user`).
+  - Criação do diálogo acessível `SearchUsersDialog` para busca de usuários por nome ou @username, com lista de perfis, detalhes, e ações diretas (seguir, enviar DM, bloquear e abrir timeline).
+  - Criação do diálogo acessível `UserTimelineDialog` permitindo inspecionar e interagir com as publicações de qualquer perfil do X.
+  - Adição de novos atalhos de menu: `Ctrl+Shift+U` (Buscar Usuários), `Ctrl+U` (Abrir Linha do Tempo de Usuário), `Ctrl+Shift+F` (Seguir Autor), `Ctrl+Alt+F` (Deixar de Seguir Autor) e `Ctrl+Shift+B` (Bloquear Autor).
+- **Buffer Permanente de Enviados (`src/ui/app.py`, `src/ui/main_window.py`, `src/platforms/x_twitter/browser.py`)**:
+  - Adição do fluxo 'Enviados' (`sent`) na árvore de contas, armazenando e atualizando todas as publicações e respostas postadas pelo próprio usuário.
+  - Navegação e carregamento automático das postagens do próprio usuário (`UserTweets`) no X ao selecionar ou atualizar o buffer 'Enviados'.
+- **Modo Oculto em Segundo Plano e Atalhos Globais (`src/ui/main_window.py`, `src/core/config.py`)**:
+  - Implementação de teclas de atalho globais do Windows (`RegisterHotKey`) compatíveis com Windows 10 e Windows 11 sem conflitos de sistema operacional:
+    - `Ctrl+Win+H`: Ocultar e restaurar a janela do aplicativo com anúncio via fala.
+    - `Ctrl+Win+Down` / `Ctrl+Win+Up`: Ler próxima / anterior publicação em segundo plano com fala direta.
+    - `Ctrl+Alt+Win+Right` / `Ctrl+Alt+Win+Left`: Alternar entre fluxos (Para você, Seguindo, Menções, DMs, Enviados) em segundo plano.
+    - `Alt+Win+N`: Compor nova publicação a partir de qualquer aplicativo.
+    - `Ctrl+Win+R`: Responder à publicação selecionada em segundo plano.
+    - `Alt+Win+L`: Curtir / descurtir publicação ativa em segundo plano.
+    - `Alt+Win+C`: Copiar texto da publicação ativa diretamente para a área de transferência.
+  - Implementação do ícone acessível na área de notificação do Windows (`TimelineTaskBarIcon` / SysTray) com menu de contexto e suporte a minimizar ao fechar (`hide_to_tray_on_close`).
+- **Customização Avançada no Diálogo de Configurações (`src/ui/dialogs.py`, `src/core/models.py`, `src/core/config.py`)**:
+  - Redesenho da janela de preferências com abas (`wx.Notebook`): Geral, Exibição e Leitura, Áudio e Atalhos de Teclado.
+  - Configuração do formato de exibição dos autores (Nome e @usuário, Apenas Nome, Apenas @usuário, @usuário e Nome).
+  - Configuração do formato de data e hora (Relativo, Absoluto, Ambos).
+  - Exibição customizável de métricas no resumo acessível da lista.
+  - Tabela acessível para visualização de todos os atalhos locais e globais do sistema.
+
+### Testes
+- Adição de `tests/test_speech.py` validando os fluxos de fala direta do NVDA, fallback universal para accessible_output2 e silenciamento.
+- Adição de `tests/test_user_model.py` testando resumos acessíveis de `User`, múltiplos formatos de exibição de `Post` e parsing de atalhos globais.
+- Execução de 47 testes unitários com 100% de aprovação.
+
+---
+
 ## [0.1.0-dev.19] - 2026-10-17
 
 ### Adicionado

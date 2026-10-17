@@ -18,7 +18,7 @@ import time
 from typing import Callable, Optional
 from playwright.sync_api import sync_playwright, BrowserContext, Page, Response
 from src.platforms.x_twitter.parser import parse_x_graphql_response
-from src.core.models import Post
+from src.core.models import Post, User
 
 logger = logging.getLogger("AccessibleTimeline.Browser")
 
@@ -106,6 +106,7 @@ class XBrowserManager:
         self._cmd_queue: queue.Queue = queue.Queue()
         self._running = False
         self._account_name: Optional[str] = None
+        self._my_username: Optional[str] = None
         self._force_visible = False
         self._current_headless: Optional[bool] = None
 
@@ -169,14 +170,16 @@ class XBrowserManager:
         """Comanda a página a rolar para baixo para carregar mais publicações."""
         self._cmd_queue.put(("scroll_down", None))
 
-    def execute_action(self, action_name: str, timeout: float = 35.0, **kwargs) -> bool:
+    def execute_action(self, action_name: str, timeout: float = 35.0, **kwargs):
         """Envia comando de ação para a thread do navegador e aguarda a conclusão."""
         if not self._running:
             return False
         event = threading.Event()
-        res_holder = {"success": False}
+        res_holder = {"success": False, "result": None}
         self._cmd_queue.put(("action", (action_name, kwargs, event, res_holder)))
         event.wait(timeout=timeout)
+        if res_holder.get("result") is not None:
+            return res_holder["result"]
         return res_holder["success"]
 
     def _do_create_post(self, page: Page, text: str) -> bool:
@@ -395,6 +398,210 @@ class XBrowserManager:
             self._set_status(f"Falha ao enviar DM: {e}")
             return False
 
+    def _do_follow_user(self, page: Page, username: str) -> bool:
+        """Segue um usuário no X."""
+        clean_user = username.lstrip("@").strip()
+        logger.info(f"Executando seguir @{clean_user}...")
+        self._set_status(f"Seguindo @{clean_user} no X...")
+        try:
+            page.goto(f"https://x.com/{clean_user}", wait_until="domcontentloaded", timeout=25000)
+            time.sleep(1.5)
+
+            # Se já está seguindo
+            if page.locator(f'[data-testid$="-unfollow"]').count() > 0:
+                self._set_status(f"Você já está seguindo @{clean_user}.")
+                return True
+
+            follow_btn = page.wait_for_selector(f'[data-testid$="-follow"]', timeout=10000)
+            if not follow_btn:
+                follow_btn = page.locator('button:has-text("Seguir"), button:has-text("Follow")').first
+            if follow_btn and follow_btn.is_visible():
+                follow_btn.click()
+                time.sleep(1.5)
+                self._set_status(f"Agora você está seguindo @{clean_user}!")
+                return True
+            else:
+                self._set_status(f"Erro: Botão de seguir não encontrado para @{clean_user}.")
+                return False
+        except Exception as e:
+            logger.error(f"Erro ao seguir @{clean_user}: {e}")
+            self._set_status(f"Falha ao seguir @{clean_user}: {e}")
+            return False
+
+    def _do_unfollow_user(self, page: Page, username: str) -> bool:
+        """Deixa de seguir um usuário no X."""
+        clean_user = username.lstrip("@").strip()
+        logger.info(f"Executando deixar de seguir @{clean_user}...")
+        self._set_status(f"Deixando de seguir @{clean_user} no X...")
+        try:
+            page.goto(f"https://x.com/{clean_user}", wait_until="domcontentloaded", timeout=25000)
+            time.sleep(1.5)
+
+            # Se não está seguindo
+            if page.locator(f'[data-testid$="-follow"]').count() > 0:
+                self._set_status(f"Você não está seguindo @{clean_user}.")
+                return True
+
+            unfollow_btn = page.wait_for_selector(f'[data-testid$="-unfollow"]', timeout=10000)
+            if not unfollow_btn:
+                unfollow_btn = page.locator('button:has-text("Seguindo"), button:has-text("Following")').first
+            if unfollow_btn and unfollow_btn.is_visible():
+                unfollow_btn.click()
+                time.sleep(0.5)
+
+                confirm_btn = page.wait_for_selector('[data-testid="confirmationSheetConfirm"]', timeout=6000)
+                if confirm_btn:
+                    confirm_btn.click()
+                time.sleep(1.5)
+                self._set_status(f"Você deixou de seguir @{clean_user}.")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Erro ao deixar de seguir @{clean_user}: {e}")
+            self._set_status(f"Falha ao deixar de seguir @{clean_user}: {e}")
+            return False
+
+    def _do_block_user(self, page: Page, username: str) -> bool:
+        """Bloqueia um usuário no X."""
+        clean_user = username.lstrip("@").strip()
+        logger.info(f"Executando bloqueio de @{clean_user}...")
+        self._set_status(f"Bloqueando @{clean_user} no X...")
+        try:
+            page.goto(f"https://x.com/{clean_user}", wait_until="domcontentloaded", timeout=25000)
+            time.sleep(1.5)
+
+            if page.locator(f'[data-testid$="-unblock"]').count() > 0:
+                self._set_status(f"@{clean_user} já está bloqueado.")
+                return True
+
+            user_actions_btn = page.wait_for_selector('[data-testid="userActions"]', timeout=10000)
+            if user_actions_btn:
+                user_actions_btn.click()
+                time.sleep(0.5)
+
+                block_item = page.wait_for_selector('[data-testid="block"]', timeout=6000)
+                if block_item:
+                    block_item.click()
+                    time.sleep(0.5)
+
+                    confirm_btn = page.wait_for_selector('[data-testid="confirmationSheetConfirm"]', timeout=6000)
+                    if confirm_btn:
+                        confirm_btn.click()
+                    time.sleep(1.5)
+                    self._set_status(f"@{clean_user} foi bloqueado com sucesso.")
+                    return True
+            return False
+        except Exception as e:
+            logger.error(f"Erro ao bloquear @{clean_user}: {e}")
+            self._set_status(f"Falha ao bloquear @{clean_user}: {e}")
+            return False
+
+    def _do_unblock_user(self, page: Page, username: str) -> bool:
+        """Desbloqueia um usuário no X."""
+        clean_user = username.lstrip("@").strip()
+        logger.info(f"Executando desbloqueio de @{clean_user}...")
+        self._set_status(f"Desbloqueando @{clean_user} no X...")
+        try:
+            page.goto(f"https://x.com/{clean_user}", wait_until="domcontentloaded", timeout=25000)
+            time.sleep(1.5)
+
+            unblock_btn = page.wait_for_selector(f'[data-testid$="-unblock"]', timeout=8000)
+            if unblock_btn:
+                unblock_btn.click()
+                time.sleep(0.5)
+                confirm_btn = page.wait_for_selector('[data-testid="confirmationSheetConfirm"]', timeout=6000)
+                if confirm_btn:
+                    confirm_btn.click()
+                time.sleep(1.5)
+                self._set_status(f"@{clean_user} foi desbloqueado com sucesso.")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Erro ao desbloquear @{clean_user}: {e}")
+            self._set_status(f"Falha ao desbloquear @{clean_user}: {e}")
+            return False
+
+    def _do_search_users(self, page: Page, query: str) -> list[User]:
+        """Pesquisa usuários no X e extrai os perfis encontrados."""
+        import urllib.parse
+        clean_q = query.strip()
+        logger.info(f"Buscando usuários por '{clean_q}'...")
+        self._set_status(f"Pesquisando usuários por '{clean_q}'...")
+        users: list[User] = []
+        try:
+            encoded_q = urllib.parse.quote(clean_q)
+            page.goto(f"https://x.com/search?q={encoded_q}&f=user", wait_until="domcontentloaded", timeout=25000)
+            time.sleep(2.5)
+
+            cells = page.locator('[data-testid="UserCell"]').all()
+            for cell in cells[:20]:
+                try:
+                    text_content = cell.inner_text()
+                    lines = [s.strip() for s in text_content.split("\n") if s.strip()]
+                    name = lines[0] if lines else "Usuário"
+                    username = ""
+                    bio = ""
+                    for line in lines[1:]:
+                        if line.startswith("@") and not username:
+                            username = line.lstrip("@")
+                        elif not line.startswith("@") and line not in ("Seguir", "Seguindo", "Follow", "Following"):
+                            bio = line
+                            break
+
+                    is_following = cell.locator('[data-testid$="-unfollow"]').count() > 0 or "Seguindo" in text_content
+
+                    if username:
+                        users.append(User(
+                            id=username,
+                            name=name,
+                            username=username,
+                            bio=bio,
+                            is_following=is_following,
+                            url=f"https://x.com/{username}"
+                        ))
+                except Exception as cell_err:
+                    logger.debug(f"Aviso ao extrair célula de usuário: {cell_err}")
+
+            self._set_status(f"{len(users)} perfis encontrados para '{clean_q}'.")
+            return users
+        except Exception as e:
+            logger.error(f"Erro ao buscar usuários: {e}")
+            self._set_status(f"Falha ao buscar usuários: {e}")
+            return users
+
+    def _do_fetch_user_timeline(self, page: Page, username: str) -> list[Post]:
+        """Navega para o perfil do usuário e captura suas publicações recentes."""
+        clean_user = username.lstrip("@").strip()
+        logger.info(f"Obtendo publicações de @{clean_user}...")
+        self._set_status(f"Carregando linha do tempo de @{clean_user}...")
+        captured_posts: list[Post] = []
+
+        def _temp_response_handler(response: Response):
+            if "/i/api/" in response.url:
+                try:
+                    if "application/json" in response.headers.get("content-type", ""):
+                        payload = response.json()
+                        p = parse_x_graphql_response(payload)
+                        if p:
+                            for item in p:
+                                if item.id not in [x.id for x in captured_posts]:
+                                    captured_posts.append(item)
+                except Exception:
+                    pass
+
+        page.on("response", _temp_response_handler)
+        try:
+            page.goto(f"https://x.com/{clean_user}", wait_until="domcontentloaded", timeout=25000)
+            time.sleep(3.0)
+        finally:
+            try:
+                page.remove_listener("response", _temp_response_handler)
+            except Exception:
+                pass
+
+        self._set_status(f"{len(captured_posts)} publicações carregadas de @{clean_user}.")
+        return captured_posts
+
     def _detect_account_info(self, page: Page):
         """Tenta extrair o nome e usuário da conta conectada."""
         js_code = """
@@ -413,17 +620,30 @@ class XBrowserManager:
         """
         try:
             acc = page.evaluate(js_code)
-            if acc and acc != self._account_name:
-                self._account_name = acc
-                logger.info(f"Conta conectada detectada: {acc}")
-                if self.on_account_info_callback:
-                    self.on_account_info_callback(acc)
+            if acc:
+                if "(" in acc and ")" in acc:
+                    user_handle = acc.split("(")[-1].rstrip(")").lstrip("@").strip()
+                    if user_handle:
+                        self._my_username = user_handle
+                if acc != self._account_name:
+                    self._account_name = acc
+                    logger.info(f"Conta conectada detectada: {acc} (username: {self._my_username})")
+                    if self.on_account_info_callback:
+                        self.on_account_info_callback(acc)
         except Exception:
             pass
 
     def _click_tab_by_name(self, page: Page, feed_name: str) -> bool:
         """Clica na aba especificada usando locators nativos do Playwright com fallback JS."""
-        if feed_name in ("mentions", "notifications"):
+        if feed_name == "sent":
+            target_url = f"https://x.com/{self._my_username}" if self._my_username else "https://x.com/home"
+            try:
+                page.goto(target_url, wait_until="domcontentloaded", timeout=25000)
+                return True
+            except Exception as e:
+                logger.warning(f"Erro ao navegar para enviados ({target_url}): {e}")
+                return False
+        elif feed_name in ("mentions", "notifications"):
             try:
                 page.goto("https://x.com/notifications", wait_until="domcontentloaded", timeout=25000)
                 return True
@@ -544,12 +764,20 @@ class XBrowserManager:
                             feed_type = "mentions"
                         elif "dm" in url or "messages" in url:
                             feed_type = "dms"
+                        elif "UserTweets" in url or (self._my_username and f"/{self._my_username}" in url):
+                            feed_type = "sent"
                         else:
                             feed_type = "for_you"
 
                         logger.info(f"Interceptadas {len(posts)} publicações para o fluxo '{feed_type}'")
                         if self.on_posts_callback:
                             self.on_posts_callback(feed_type, posts)
+
+                        # Se tivermos publicações do próprio usuário autenticado em outros fluxos, envia para 'sent'
+                        if self._my_username and feed_type != "sent":
+                            my_posts = [p for p in posts if p.author_username.lower() == self._my_username.lower()]
+                            if my_posts and self.on_posts_callback:
+                                self.on_posts_callback("sent", my_posts)
             except Exception as e:
                 logger.debug(f"Aviso ao processar resposta: {e}")
 
@@ -766,6 +994,20 @@ class XBrowserManager:
                                         res_holder["success"] = self._do_unlike_post(page, **kwargs)
                                     elif action_name == "send_dm":
                                         res_holder["success"] = self._do_send_dm(page, **kwargs)
+                                    elif action_name == "follow_user":
+                                        res_holder["success"] = self._do_follow_user(page, **kwargs)
+                                    elif action_name == "unfollow_user":
+                                        res_holder["success"] = self._do_unfollow_user(page, **kwargs)
+                                    elif action_name == "block_user":
+                                        res_holder["success"] = self._do_block_user(page, **kwargs)
+                                    elif action_name == "unblock_user":
+                                        res_holder["success"] = self._do_unblock_user(page, **kwargs)
+                                    elif action_name == "search_users":
+                                        res_holder["result"] = self._do_search_users(page, **kwargs)
+                                        res_holder["success"] = True
+                                    elif action_name == "fetch_user_timeline":
+                                        res_holder["result"] = self._do_fetch_user_timeline(page, **kwargs)
+                                        res_holder["success"] = True
                                 except Exception as act_err:
                                     logger.error(f"Erro ao executar ação {action_name}: {act_err}")
                                     res_holder["success"] = False

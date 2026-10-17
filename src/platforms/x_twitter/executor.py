@@ -7,8 +7,9 @@ Totalmente desacoplado do leitor e do parser de timelines.
 
 import logging
 import threading
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 import wx
+from src.core.models import Post, User
 from src.platforms.base import BaseActionExecutor
 from src.platforms.x_twitter.browser import XBrowserManager
 
@@ -50,6 +51,32 @@ class XActionExecutor(BaseActionExecutor):
     def send_dm(self, recipient_username: str, text: str) -> bool:
         """Envia uma mensagem direta (DM) privada para um usuário."""
         return self.browser_manager.execute_action("send_dm", recipient=recipient_username, text=text)
+
+    def follow_user(self, username: str) -> bool:
+        """Começa a seguir um usuário no serviço."""
+        return bool(self.browser_manager.execute_action("follow_user", username=username))
+
+    def unfollow_user(self, username: str) -> bool:
+        """Deixa de seguir um usuário no serviço."""
+        return bool(self.browser_manager.execute_action("unfollow_user", username=username))
+
+    def block_user(self, username: str) -> bool:
+        """Bloqueia um usuário no serviço."""
+        return bool(self.browser_manager.execute_action("block_user", username=username))
+
+    def unblock_user(self, username: str) -> bool:
+        """Desbloqueia um usuário no serviço."""
+        return bool(self.browser_manager.execute_action("unblock_user", username=username))
+
+    def search_users(self, query: str) -> List[User]:
+        """Pesquisa perfis de usuários na plataforma."""
+        res = self.browser_manager.execute_action("search_users", query=query)
+        return res if isinstance(res, list) else []
+
+    def fetch_user_timeline(self, username: str) -> List[Post]:
+        """Obtém as publicações recentes da linha do tempo de um usuário específico."""
+        res = self.browser_manager.execute_action("fetch_user_timeline", username=username)
+        return res if isinstance(res, list) else []
 
     def run_async(
         self,

@@ -2,11 +2,12 @@ import os
 import tempfile
 import threading
 import webbrowser
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 import wx
-from src.core.models import Post
+from src.core.models import Post, User
 from src.audio.manager import sound_manager
-from src.core.config import config_manager
+from src.audio.speech import speech_manager
+from src.core.config import config_manager, DEFAULT_SHORTCUTS, DEFAULT_GLOBAL_SHORTCUTS
 
 
 class SelectLinkDialog(wx.Dialog):
@@ -591,14 +592,17 @@ class SendDMDialog(wx.Dialog):
 
 class SettingsDialog(wx.Dialog):
     """
-    Diálogo acessível de configurações do Accessible Timeline.
-    Permite configurar a verificação automática de atualizações e preferências do aplicativo.
+    Diálogo acessível de configurações do Accessible Timeline organizado em abas (estilo TWBlue):
+    - Geral (atualizações automáticas, minimizar para a bandeja, atalhos globais)
+    - Exibição e Leitura (formato de autor, formato de data, métricas, leitura de status e menções)
+    - Áudio (efeitos sonoros, tema)
+    - Atalhos de Teclado (visualização e restauração de atalhos)
     """
     def __init__(self, parent: wx.Window):
         super().__init__(
             parent,
             title="Configurações",
-            size=(520, 240),
+            size=(640, 480),
             style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
         )
         self._init_ui()
@@ -606,22 +610,191 @@ class SettingsDialog(wx.Dialog):
 
     def _init_ui(self):
         panel = wx.Panel(self)
-        sizer = wx.BoxSizer(wx.VERTICAL)
+        main_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        # Grupo Atualizações
-        update_box = wx.StaticBox(panel, label="Atualizações do Aplicativo")
-        update_sizer = wx.StaticBoxSizer(update_box, wx.VERTICAL)
+        self.notebook = wx.Notebook(panel)
+
+        # Aba 1: Geral
+        general_panel = wx.Panel(self.notebook)
+        gen_sizer = wx.BoxSizer(wx.VERTICAL)
 
         self.chk_auto_updates = wx.CheckBox(
-            panel,
+            general_panel,
             label="&Verificar atualizações automaticamente ao iniciar o aplicativo"
         )
         self.chk_auto_updates.SetValue(config_manager.get("check_updates_automatically", True))
-        update_sizer.Add(self.chk_auto_updates, 0, wx.ALL, 10)
+        gen_sizer.Add(self.chk_auto_updates, 0, wx.ALL, 10)
 
-        sizer.Add(update_sizer, 0, wx.EXPAND | wx.ALL, 12)
+        self.chk_hide_tray = wx.CheckBox(
+            general_panel,
+            label="&Minimizar para a área de notificação (bandeja do sistema) ao fechar"
+        )
+        self.chk_hide_tray.SetValue(config_manager.get("hide_to_tray_on_close", False))
+        gen_sizer.Add(self.chk_hide_tray, 0, wx.ALL, 10)
 
-        # Botões de Ação
+        self.chk_global_hotkeys = wx.CheckBox(
+            general_panel,
+            label="Ativar &atalhos globais de segundo plano (Ctrl+Win)"
+        )
+        self.chk_global_hotkeys.SetValue(config_manager.get("global_hotkeys_enabled", True))
+        gen_sizer.Add(self.chk_global_hotkeys, 0, wx.ALL, 10)
+
+        general_panel.SetSizer(gen_sizer)
+        self.notebook.AddPage(general_panel, "&Geral")
+
+        # Aba 2: Exibição e Leitura
+        display_panel = wx.Panel(self.notebook)
+        disp_sizer = wx.BoxSizer(wx.VERTICAL)
+
+        disp_sizer.Add(wx.StaticText(display_panel, label="&Formato de exibição do autor nas postagens:"), 0, wx.LEFT | wx.RIGHT | wx.TOP, 10)
+        self.author_choices = [
+            ("name_and_username", "Nome e Usuário (@arroba) - Ex: Maria Silva (@mariasilva)"),
+            ("name_only", "Apenas Nome - Ex: Maria Silva"),
+            ("username_only", "Apenas Usuário - Ex: @mariasilva"),
+            ("username_and_name", "Usuário e Nome - Ex: @mariasilva (Maria Silva)"),
+        ]
+        self.combo_author = wx.ComboBox(
+            display_panel,
+            choices=[label for _, label in self.author_choices],
+            style=wx.CB_DROPDOWN | wx.CB_READONLY
+        )
+        curr_author = config_manager.get("author_display_format", "name_and_username")
+        sel_idx = next((i for i, (k, _) in enumerate(self.author_choices) if k == curr_author), 0)
+        self.combo_author.SetSelection(sel_idx)
+        disp_sizer.Add(self.combo_author, 0, wx.EXPAND | wx.ALL, 10)
+
+        disp_sizer.Add(wx.StaticText(display_panel, label="&Formato de data e hora:"), 0, wx.LEFT | wx.RIGHT | wx.TOP, 10)
+        self.time_choices = [
+            ("relative", "Tempo relativo (estilo TWBlue) - Ex: 2 horas atrás"),
+            ("absolute", "Data e hora exata - Ex: 17/10 14:30"),
+            ("both", "Ambos - Ex: 2 horas atrás (17/10 14:30)"),
+        ]
+        self.combo_time = wx.ComboBox(
+            display_panel,
+            choices=[label for _, label in self.time_choices],
+            style=wx.CB_DROPDOWN | wx.CB_READONLY
+        )
+        curr_time = config_manager.get("time_display_format", "relative")
+        t_idx = next((i for i, (k, _) in enumerate(self.time_choices) if k == curr_time), 0)
+        self.combo_time.SetSelection(t_idx)
+        disp_sizer.Add(self.combo_time, 0, wx.EXPAND | wx.ALL, 10)
+
+        self.chk_metrics = wx.CheckBox(
+            display_panel,
+            label="Anunciar &curtidas, reposts e respostas no resumo ao navegar com setas"
+        )
+        self.chk_metrics.SetValue(config_manager.get("show_metrics_in_summary", True))
+        disp_sizer.Add(self.chk_metrics, 0, wx.ALL, 10)
+
+        self.chk_speak_status = wx.CheckBox(
+            display_panel,
+            label="&Falar alertas e mensagens da barra de status pelo leitor de tela"
+        )
+        self.chk_speak_status.SetValue(config_manager.get("speak_status_alerts", True))
+        disp_sizer.Add(self.chk_speak_status, 0, wx.ALL, 10)
+
+        self.chk_speak_mentions = wx.CheckBox(
+            display_panel,
+            label="Falar novas &menções recebidas automaticamente"
+        )
+        self.chk_speak_mentions.SetValue(config_manager.get("speak_new_mentions", True))
+        disp_sizer.Add(self.chk_speak_mentions, 0, wx.ALL, 10)
+
+        display_panel.SetSizer(disp_sizer)
+        self.notebook.AddPage(display_panel, "&Exibição e Leitura")
+
+        # Aba 3: Áudio
+        audio_panel = wx.Panel(self.notebook)
+        audio_sizer = wx.BoxSizer(wx.VERTICAL)
+
+        self.chk_sound_enabled = wx.CheckBox(
+            audio_panel,
+            label="Ativar &efeitos sonoros"
+        )
+        self.chk_sound_enabled.SetValue(config_manager.get("sound_enabled", True))
+        audio_sizer.Add(self.chk_sound_enabled, 0, wx.ALL, 10)
+
+        audio_sizer.Add(wx.StaticText(audio_panel, label="&Pacote de sons do TWBlue:"), 0, wx.LEFT | wx.RIGHT | wx.TOP, 10)
+        self.sound_themes = ["default", "classic", "Qwitter", "Magical Fountain", "FreakyBlue", "FightingGames"]
+        self.combo_sound_theme = wx.ComboBox(
+            audio_panel,
+            choices=self.sound_themes,
+            style=wx.CB_DROPDOWN | wx.CB_READONLY
+        )
+        curr_th = config_manager.get("sound_theme", "default")
+        th_idx = self.sound_themes.index(curr_th) if curr_th in self.sound_themes else 0
+        self.combo_sound_theme.SetSelection(th_idx)
+        audio_sizer.Add(self.combo_sound_theme, 0, wx.EXPAND | wx.ALL, 10)
+
+        audio_panel.SetSizer(audio_sizer)
+        self.notebook.AddPage(audio_panel, "Á&udio")
+
+        # Aba 4: Atalhos de Teclado
+        shortcuts_panel = wx.Panel(self.notebook)
+        sc_sizer = wx.BoxSizer(wx.VERTICAL)
+
+        sc_sizer.Add(wx.StaticText(shortcuts_panel, label="Atalhos configurados no aplicativo (padrão TWBlue):"), 0, wx.ALL, 10)
+
+        self.sc_list = wx.ListCtrl(
+            shortcuts_panel,
+            style=wx.LC_REPORT | wx.LC_SINGLE_SEL
+        )
+        self.sc_list.InsertColumn(0, "Ação", width=260)
+        self.sc_list.InsertColumn(1, "Atalho", width=220)
+
+        self._shortcuts_data = [
+            ("Nova Publicação", "new_post", "Ctrl+N"),
+            ("Responder", "reply", "Ctrl+R"),
+            ("Repostar / Retweet", "retweet", "Ctrl+Shift+R"),
+            ("Citar Publicação", "quote", "Ctrl+Shift+C"),
+            ("Curtir / Descurtir", "like", "Ctrl+L"),
+            ("Enviar Mensagem Direta", "send_dm", "Ctrl+D"),
+            ("Linha do Tempo de Usuário", "user_timeline", "Ctrl+U"),
+            ("Buscar Usuários", "search_users", "Ctrl+Shift+U"),
+            ("Seguir Autor", "follow", "Ctrl+Shift+F"),
+            ("Deixar de Seguir Autor", "unfollow", "Ctrl+Alt+F"),
+            ("Bloquear Autor", "block", "Ctrl+Shift+B"),
+            ("Atualizar Fluxo Ativo", "refresh", "F5"),
+            ("Carregar Mais Postagens", "load_more", "Ctrl+M"),
+            ("Ver Detalhes do Post", "details", "Enter"),
+            ("Abrir Link no Navegador", "open_link", "Ctrl+Enter"),
+            ("Alternar Janela do Navegador", "toggle_browser", "Ctrl+Shift+M"),
+            ("Abrir Configurações", "settings", "Ctrl+P"),
+            ("[Global] Ocultar/Restaurar Janela", "toggle_visibility", "Ctrl+Win+H"),
+            ("[Global] Próximo Post", "next_post", "Ctrl+Win+Down"),
+            ("[Global] Post Anterior", "prev_post", "Ctrl+Win+Up"),
+            ("[Global] Próximo Fluxo", "next_stream", "Ctrl+Win+Right"),
+            ("[Global] Fluxo Anterior", "prev_stream", "Ctrl+Win+Left"),
+            ("[Global] Nova Publicação", "new_post_global", "Ctrl+Win+N"),
+            ("[Global] Curtir Post", "like_global", "Ctrl+Win+L"),
+            ("[Global] Copiar Texto do Post", "copy_text", "Ctrl+Win+C"),
+        ]
+
+        active_sc = config_manager.get("shortcuts", DEFAULT_SHORTCUTS)
+        active_glob = config_manager.get("global_shortcuts", DEFAULT_GLOBAL_SHORTCUTS)
+
+        for idx, (label, key, default_val) in enumerate(self._shortcuts_data):
+            if key in active_sc:
+                val = active_sc[key]
+            elif key.replace("_global", "") in active_glob:
+                val = active_glob[key.replace("_global", "")]
+            else:
+                val = default_val
+            row = self.sc_list.InsertItem(idx, label)
+            self.sc_list.SetItem(row, 1, str(val))
+
+        sc_sizer.Add(self.sc_list, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
+
+        self.btn_reset_shortcuts = wx.Button(shortcuts_panel, label="&Restaurar Atalhos Padrão")
+        self.btn_reset_shortcuts.Bind(wx.EVT_BUTTON, self._on_reset_shortcuts)
+        sc_sizer.Add(self.btn_reset_shortcuts, 0, wx.ALL, 10)
+
+        shortcuts_panel.SetSizer(sc_sizer)
+        self.notebook.AddPage(shortcuts_panel, "&Atalhos")
+
+        main_sizer.Add(self.notebook, 1, wx.EXPAND | wx.ALL, 8)
+
+        # Botões Salvar e Cancelar
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.save_btn = wx.Button(panel, wx.ID_OK, label="&Salvar")
         self.save_btn.SetDefault()
@@ -630,16 +803,43 @@ class SettingsDialog(wx.Dialog):
         cancel_btn = wx.Button(panel, wx.ID_CANCEL, label="&Cancelar")
         btn_sizer.Add(cancel_btn, 0)
 
-        sizer.Add(btn_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 12)
-        panel.SetSizer(sizer)
+        main_sizer.Add(btn_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
+        panel.SetSizer(main_sizer)
 
         self.Bind(wx.EVT_BUTTON, self._on_save, id=wx.ID_OK)
         self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
-        wx.CallAfter(self.chk_auto_updates.SetFocus)
+
+    def _on_reset_shortcuts(self, event):
+        config_manager.set("shortcuts", dict(DEFAULT_SHORTCUTS))
+        config_manager.set("global_shortcuts", dict(DEFAULT_GLOBAL_SHORTCUTS))
+        for idx, (label, key, default_val) in enumerate(self._shortcuts_data):
+            self.sc_list.SetItem(idx, 1, default_val)
+        wx.MessageBox("Atalhos restaurados para os padrões com sucesso!", "Informação", wx.OK | wx.ICON_INFORMATION, self)
 
     def _on_save(self, event):
-        auto_check = self.chk_auto_updates.GetValue()
-        config_manager.set("check_updates_automatically", auto_check)
+        config_manager.set("check_updates_automatically", self.chk_auto_updates.GetValue(), auto_save=False)
+        config_manager.set("hide_to_tray_on_close", self.chk_hide_tray.GetValue(), auto_save=False)
+        config_manager.set("global_hotkeys_enabled", self.chk_global_hotkeys.GetValue(), auto_save=False)
+
+        author_k = self.author_choices[self.combo_author.GetSelection()][0]
+        config_manager.set("author_display_format", author_k, auto_save=False)
+
+        time_k = self.time_choices[self.combo_time.GetSelection()][0]
+        config_manager.set("time_display_format", time_k, auto_save=False)
+
+        config_manager.set("show_metrics_in_summary", self.chk_metrics.GetValue(), auto_save=False)
+        config_manager.set("speak_status_alerts", self.chk_speak_status.GetValue(), auto_save=False)
+        config_manager.set("speak_new_mentions", self.chk_speak_mentions.GetValue(), auto_save=False)
+
+        sound_en = self.chk_sound_enabled.GetValue()
+        config_manager.set("sound_enabled", sound_en, auto_save=False)
+        sound_manager.enabled = sound_en
+
+        theme_name = self.sound_themes[self.combo_sound_theme.GetSelection()]
+        config_manager.set("sound_theme", theme_name, auto_save=False)
+        sound_manager.set_theme(theme_name)
+
+        config_manager.save()
         self.EndModal(wx.ID_OK)
 
     def _on_char_hook(self, event):
@@ -648,6 +848,421 @@ class SettingsDialog(wx.Dialog):
             self.EndModal(wx.ID_CANCEL)
         else:
             event.Skip()
+
+
+class UserTimelineDialog(wx.Dialog):
+    """
+    Diálogo acessível para visualização da linha do tempo de um usuário específico (estilo TWBlue).
+    Permite ler as postagens com as setas, abrir detalhes, links, responder, repostar e curtir.
+    """
+    def __init__(self, parent: wx.Window, username: str, executor):
+        clean_user = username.lstrip("@").strip()
+        super().__init__(
+            parent,
+            title=f"Linha do Tempo de @{clean_user}",
+            size=(850, 560),
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
+        )
+        self.username = clean_user
+        self.executor = executor
+        self.posts: List[Post] = []
+        self._init_ui()
+        self.CenterOnParent()
+        wx.CallAfter(self._load_timeline)
+
+    def _init_ui(self):
+        panel = wx.Panel(self)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        self.status_label = wx.StaticText(panel, label=f"Carregando publicações de @{self.username}...")
+        sizer.Add(self.status_label, 0, wx.ALL, 10)
+
+        self.list_ctrl = wx.ListCtrl(
+            panel,
+            style=wx.LC_REPORT | wx.LC_NO_HEADER | wx.LC_SINGLE_SEL
+        )
+        self.list_ctrl.InsertColumn(0, "Publicações", width=1200)
+        sizer.Add(self.list_ctrl, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
+
+        # Botões de Ação
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.btn_details = wx.Button(panel, label="Ver &Detalhes (Enter)")
+        btn_sizer.Add(self.btn_details, 0, wx.RIGHT, 6)
+
+        self.btn_open_link = wx.Button(panel, label="Abrir &Link (Ctrl+Enter)")
+        btn_sizer.Add(self.btn_open_link, 0, wx.RIGHT, 6)
+
+        self.btn_reply = wx.Button(panel, label="&Responder (Ctrl+R)")
+        btn_sizer.Add(self.btn_reply, 0, wx.RIGHT, 6)
+
+        self.btn_retweet = wx.Button(panel, label="Re&postar (Ctrl+Shift+R)")
+        btn_sizer.Add(self.btn_retweet, 0, wx.RIGHT, 6)
+
+        self.btn_like = wx.Button(panel, label="&Curtir (Ctrl+L)")
+        btn_sizer.Add(self.btn_like, 0, wx.RIGHT, 6)
+
+        self.btn_refresh = wx.Button(panel, label="&Atualizar (F5)")
+        btn_sizer.Add(self.btn_refresh, 0, wx.RIGHT, 6)
+
+        btn_close = wx.Button(panel, wx.ID_CANCEL, label="&Fechar (Esc)")
+        btn_sizer.Add(btn_close, 0)
+
+        sizer.Add(btn_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
+        panel.SetSizer(sizer)
+
+        # Eventos
+        self.btn_details.Bind(wx.EVT_BUTTON, self._on_details)
+        self.btn_open_link.Bind(wx.EVT_BUTTON, self._on_open_link)
+        self.btn_reply.Bind(wx.EVT_BUTTON, self._on_reply)
+        self.btn_retweet.Bind(wx.EVT_BUTTON, self._on_retweet)
+        self.btn_like.Bind(wx.EVT_BUTTON, self._on_like)
+        self.btn_refresh.Bind(wx.EVT_BUTTON, lambda e: self._load_timeline())
+        self.list_ctrl.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self._on_details)
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
+
+    def _load_timeline(self):
+        self.status_label.SetLabel(f"Buscando publicações de @{self.username} no X...")
+        self.list_ctrl.DeleteAllItems()
+
+        def _worker():
+            try:
+                posts = self.executor.fetch_user_timeline(self.username)
+                wx.CallAfter(self._on_timeline_loaded, posts)
+            except Exception as e:
+                wx.CallAfter(self._on_timeline_error, str(e))
+
+        t = threading.Thread(target=_worker, daemon=True)
+        t.start()
+
+    def _on_timeline_loaded(self, posts: List[Post]):
+        self.posts = posts
+        self.list_ctrl.DeleteAllItems()
+        for idx, post in enumerate(posts):
+            summary = post.to_accessible_summary()
+            self.list_ctrl.InsertItem(idx, summary)
+
+        count = len(posts)
+        msg = f"{count} publicações carregadas de @{self.username}." if count > 0 else f"Nenhuma publicação encontrada para @{self.username}."
+        self.status_label.SetLabel(msg)
+        if count > 0:
+            self.list_ctrl.Select(0)
+            self.list_ctrl.Focus(0)
+            self.list_ctrl.SetFocus()
+
+    def _on_timeline_error(self, err_msg: str):
+        self.status_label.SetLabel(f"Falha ao carregar publicações: {err_msg}")
+
+    def _get_selected_post(self) -> Optional[Post]:
+        idx = self.list_ctrl.GetFirstSelected()
+        if 0 <= idx < len(self.posts):
+            return self.posts[idx]
+        return None
+
+    def _on_details(self, event):
+        post = self._get_selected_post()
+        if post:
+            dlg = PostDetailsDialog(self, post)
+            dlg.ShowModal()
+            dlg.Destroy()
+            self.list_ctrl.SetFocus()
+
+    def _on_open_link(self, event):
+        post = self._get_selected_post()
+        if post:
+            links = post.get_all_links()
+            if not links:
+                wx.MessageBox("Esta publicação não possui links ou anexos.", "Aviso", wx.OK | wx.ICON_INFORMATION, self)
+                return
+            if len(links) == 1:
+                webbrowser.open(links[0])
+            else:
+                dlg = SelectLinkDialog(self, links, post.author_name)
+                if dlg.ShowModal() == wx.ID_OK:
+                    webbrowser.open(dlg.get_selected_link())
+                dlg.Destroy()
+            self.list_ctrl.SetFocus()
+
+    def _on_reply(self, event):
+        post = self._get_selected_post()
+        if post:
+            dlg = ReplyDialog(self, post)
+            if dlg.ShowModal() == wx.ID_OK:
+                reply_text = dlg.get_text()
+                if reply_text:
+                    self.executor.run_async(
+                        action_fn=lambda: self.executor.reply_to_post(post.id, reply_text, post.author_username),
+                        on_success=lambda: sound_manager.play_send(),
+                        on_error=lambda: sound_manager.play_send_error()
+                    )
+            dlg.Destroy()
+            self.list_ctrl.SetFocus()
+
+    def _on_retweet(self, event):
+        post = self._get_selected_post()
+        if post:
+            dlg = RetweetChoiceDialog(self, post)
+            res = dlg.ShowModal()
+            action = dlg.action_choice
+            dlg.Destroy()
+            if res == wx.ID_OK:
+                if action == "retweet":
+                    self.executor.run_async(
+                        action_fn=lambda: self.executor.retweet_post(post.id),
+                        on_success=lambda: sound_manager.play_retweet(),
+                        on_error=lambda: sound_manager.play_send_error()
+                    )
+                elif action == "quote":
+                    q_dlg = QuoteDialog(self, post)
+                    if q_dlg.ShowModal() == wx.ID_OK:
+                        quote_text = q_dlg.get_text()
+                        if quote_text:
+                            self.executor.run_async(
+                                action_fn=lambda: self.executor.quote_post(post.id, quote_text, post.url),
+                                on_success=lambda: sound_manager.play_retweet(),
+                                on_error=lambda: sound_manager.play_send_error()
+                            )
+                    q_dlg.Destroy()
+            self.list_ctrl.SetFocus()
+
+    def _on_like(self, event):
+        post = self._get_selected_post()
+        if post:
+            self.executor.run_async(
+                action_fn=lambda: self.executor.like_post(post.id),
+                on_success=lambda: sound_manager.play_like(),
+                on_error=lambda: sound_manager.play_send_error()
+            )
+            self.list_ctrl.SetFocus()
+
+    def _on_char_hook(self, event):
+        key = event.GetKeyCode()
+        ctrl = event.ControlDown()
+        shift = event.ShiftDown()
+
+        if ctrl and not shift and key in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+            self._on_open_link(None)
+            return
+        elif not ctrl and not shift and key in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+            self._on_details(None)
+            return
+        elif ctrl and not shift and key in (ord('R'), ord('r')):
+            self._on_reply(None)
+            return
+        elif ctrl and shift and key in (ord('R'), ord('r')):
+            self._on_retweet(None)
+            return
+        elif ctrl and not shift and key in (ord('L'), ord('l')):
+            self._on_like(None)
+            return
+        elif not ctrl and not shift and key == wx.WXK_F5:
+            self._load_timeline()
+            return
+        elif key == wx.WXK_ESCAPE:
+            self.EndModal(wx.ID_CANCEL)
+            return
+        event.Skip()
+
+
+class SearchUsersDialog(wx.Dialog):
+    """
+    Diálogo acessível de busca de usuários no X (estilo TWBlue).
+    Permite pesquisar perfis, ver resultados em lista, seguir/deixar de seguir,
+    abrir linha do tempo, enviar DM e bloquear.
+    """
+    def __init__(self, parent: wx.Window, executor, initial_query: str = ""):
+        super().__init__(
+            parent,
+            title="Buscar Usuários",
+            size=(720, 520),
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
+        )
+        self.executor = executor
+        self.initial_query = initial_query
+        self.users: List[User] = []
+        self._init_ui()
+        self.CenterOnParent()
+
+    def _init_ui(self):
+        panel = wx.Panel(self)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        search_box = wx.BoxSizer(wx.HORIZONTAL)
+        search_label = wx.StaticText(panel, label="&Buscar usuário:")
+        search_box.Add(search_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 6)
+
+        self.query_ctrl = wx.TextCtrl(panel, value=self.initial_query, style=wx.TE_PROCESS_ENTER)
+        search_box.Add(self.query_ctrl, 1, wx.EXPAND | wx.RIGHT, 6)
+
+        self.search_btn = wx.Button(panel, label="&Pesquisar")
+        self.search_btn.SetDefault()
+        search_box.Add(self.search_btn, 0)
+
+        sizer.Add(search_box, 0, wx.EXPAND | wx.ALL, 10)
+
+        self.status_label = wx.StaticText(panel, label="Digite o nome ou @usuário e pressione Enter.")
+        sizer.Add(self.status_label, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
+
+        self.results_list = wx.ListCtrl(
+            panel,
+            style=wx.LC_REPORT | wx.LC_NO_HEADER | wx.LC_SINGLE_SEL
+        )
+        self.results_list.InsertColumn(0, "Usuários Encontrados", width=1200)
+        sizer.Add(self.results_list, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
+
+        # Botões de Ação
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.btn_timeline = wx.Button(panel, label="Ver &Linha do Tempo")
+        btn_sizer.Add(self.btn_timeline, 0, wx.RIGHT, 6)
+
+        self.btn_follow = wx.Button(panel, label="&Seguir / Deixar de Seguir")
+        btn_sizer.Add(self.btn_follow, 0, wx.RIGHT, 6)
+
+        self.btn_dm = wx.Button(panel, label="Enviar &DM")
+        btn_sizer.Add(self.btn_dm, 0, wx.RIGHT, 6)
+
+        self.btn_block = wx.Button(panel, label="&Bloquear")
+        btn_sizer.Add(self.btn_block, 0, wx.RIGHT, 6)
+
+        close_btn = wx.Button(panel, wx.ID_CANCEL, label="&Fechar")
+        btn_sizer.Add(close_btn, 0)
+
+        sizer.Add(btn_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
+        panel.SetSizer(sizer)
+
+        # Eventos
+        self.search_btn.Bind(wx.EVT_BUTTON, self._on_search)
+        self.query_ctrl.Bind(wx.EVT_TEXT_ENTER, self._on_search)
+        self.btn_timeline.Bind(wx.EVT_BUTTON, self._on_view_timeline)
+        self.btn_follow.Bind(wx.EVT_BUTTON, self._on_toggle_follow)
+        self.btn_dm.Bind(wx.EVT_BUTTON, self._on_send_dm)
+        self.btn_block.Bind(wx.EVT_BUTTON, self._on_block)
+        self.results_list.Bind(wx.EVT_LIST_ITEM_ACTIVATED, lambda e: self._on_view_timeline(None))
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
+
+        wx.CallAfter(self.query_ctrl.SetFocus)
+        if self.initial_query:
+            wx.CallAfter(self._on_search, None)
+
+    def _on_search(self, event):
+        query = self.query_ctrl.GetValue().strip()
+        if not query:
+            return
+        self.status_label.SetLabel(f"Pesquisando usuários por '{query}' no X...")
+        self.results_list.DeleteAllItems()
+
+        def _worker():
+            try:
+                users = self.executor.search_users(query)
+                wx.CallAfter(self._on_search_results, users)
+            except Exception as e:
+                wx.CallAfter(self._on_search_error, str(e))
+
+        t = threading.Thread(target=_worker, daemon=True)
+        t.start()
+
+    def _on_search_results(self, users: List[User]):
+        self.users = users
+        self.results_list.DeleteAllItems()
+        for idx, u in enumerate(users):
+            summary = u.to_accessible_summary()
+            self.results_list.InsertItem(idx, summary)
+
+        count = len(users)
+        msg = f"{count} perfis encontrados." if count > 0 else "Nenhum usuário encontrado."
+        self.status_label.SetLabel(msg)
+        if count > 0:
+            self.results_list.Select(0)
+            self.results_list.Focus(0)
+            self.results_list.SetFocus()
+
+    def _on_search_error(self, err_msg: str):
+        self.status_label.SetLabel(f"Falha na busca: {err_msg}")
+
+    def _get_selected_user(self) -> Optional[User]:
+        idx = self.results_list.GetFirstSelected()
+        if 0 <= idx < len(self.users):
+            return self.users[idx]
+        return None
+
+    def _on_view_timeline(self, event):
+        u = self._get_selected_user()
+        if u:
+            dlg = UserTimelineDialog(self, u.username, self.executor)
+            dlg.ShowModal()
+            dlg.Destroy()
+            self.results_list.SetFocus()
+
+    def _on_toggle_follow(self, event):
+        u = self._get_selected_user()
+        if u:
+            if u.is_following:
+                action_fn = lambda: self.executor.unfollow_user(u.username)
+            else:
+                action_fn = lambda: self.executor.follow_user(u.username)
+
+            def _success():
+                u.is_following = not u.is_following
+                idx = self.results_list.GetFirstSelected()
+                if idx >= 0:
+                    self.results_list.SetItem(idx, 0, u.to_accessible_summary())
+                sound_manager.play_send()
+                status_txt = f"Agora você está seguindo @{u.username}" if u.is_following else f"Você deixou de seguir @{u.username}"
+                speech_manager.speak(status_txt)
+
+            self.executor.run_async(action_fn, on_success=_success, on_error=lambda: sound_manager.play_send_error())
+
+    def _on_send_dm(self, event):
+        u = self._get_selected_user()
+        if u:
+            dlg = SendDMDialog(self, u.username)
+            if dlg.ShowModal() == wx.ID_OK:
+                rec, text = dlg.get_data()
+                self.executor.run_async(
+                    action_fn=lambda: self.executor.send_dm(rec, text),
+                    on_success=lambda: sound_manager.play_send(),
+                    on_error=lambda: sound_manager.play_send_error()
+                )
+            dlg.Destroy()
+            self.results_list.SetFocus()
+
+    def _on_block(self, event):
+        u = self._get_selected_user()
+        if u:
+            confirm = wx.MessageBox(
+                f"Tem certeza que deseja bloquear @{u.username} no X?",
+                "Confirmar Bloqueio",
+                wx.YES_NO | wx.ICON_QUESTION | wx.NO_DEFAULT,
+                self
+            )
+            if confirm == wx.YES:
+                def _success():
+                    u.is_blocked = True
+                    idx = self.results_list.GetFirstSelected()
+                    if idx >= 0:
+                        self.results_list.SetItem(idx, 0, u.to_accessible_summary())
+                    speech_manager.speak(f"@{u.username} foi bloqueado.")
+
+                self.executor.run_async(
+                    action_fn=lambda: self.executor.block_user(u.username),
+                    on_success=_success,
+                    on_error=lambda: sound_manager.play_send_error()
+                )
+            self.results_list.SetFocus()
+
+    def _on_char_hook(self, event):
+        key = event.GetKeyCode()
+        ctrl = event.ControlDown()
+        if ctrl and key in (ord('U'), ord('u')):
+            self._on_view_timeline(None)
+            return
+        elif ctrl and key in (ord('D'), ord('d')):
+            self._on_send_dm(None)
+            return
+        elif key == wx.WXK_ESCAPE:
+            self.EndModal(wx.ID_CANCEL)
+            return
+        event.Skip()
 
 
 class UpdateDownloadDialog(wx.Dialog):

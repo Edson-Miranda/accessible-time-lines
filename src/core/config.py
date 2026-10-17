@@ -13,10 +13,53 @@ from typing import Any, Dict, Optional
 
 logger = logging.getLogger("AccessibleTimeline.Config")
 
+DEFAULT_SHORTCUTS: Dict[str, str] = {
+    "new_post": "Ctrl+N",
+    "reply": "Ctrl+R",
+    "retweet": "Ctrl+Shift+R",
+    "quote": "Ctrl+Shift+C",
+    "like": "Ctrl+L",
+    "send_dm": "Ctrl+D",
+    "user_timeline": "Ctrl+U",
+    "search_users": "Ctrl+Shift+U",
+    "follow": "Ctrl+Shift+F",
+    "unfollow": "Ctrl+Alt+F",
+    "block": "Ctrl+Shift+B",
+    "refresh": "F5",
+    "load_more": "Ctrl+M",
+    "details": "Enter",
+    "open_link": "Ctrl+Enter",
+    "toggle_browser": "Ctrl+Shift+M",
+    "settings": "Ctrl+P",
+}
+
+DEFAULT_GLOBAL_SHORTCUTS: Dict[str, str] = {
+    "toggle_visibility": "Ctrl+Win+H",
+    "next_post": "Ctrl+Win+Down",
+    "prev_post": "Ctrl+Win+Up",
+    "next_stream": "Ctrl+Alt+Win+Right",
+    "prev_stream": "Ctrl+Alt+Win+Left",
+    "new_post": "Alt+Win+N",
+    "reply": "Ctrl+Win+R",
+    "like": "Alt+Win+L",
+    "copy_text": "Alt+Win+C",
+}
+
 DEFAULT_CONFIG: Dict[str, Any] = {
     "check_updates_automatically": True,
     "sound_enabled": True,
     "sound_theme": "default",
+    "speech_enabled": True,
+    "speak_status_alerts": True,
+    "speak_new_mentions": True,
+    "speak_new_tweets": False,
+    "author_display_format": "name_and_username",  # name_and_username, name_only, username_only, username_and_name
+    "time_display_format": "relative",             # relative, absolute, both
+    "show_metrics_in_summary": True,
+    "hide_to_tray_on_close": False,
+    "global_hotkeys_enabled": True,
+    "shortcuts": DEFAULT_SHORTCUTS,
+    "global_shortcuts": DEFAULT_GLOBAL_SHORTCUTS,
 }
 
 
@@ -62,9 +105,18 @@ class ConfigManager:
                 with open(self.config_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     if isinstance(data, dict):
-                        # Mescla valores lidos com os padrões
+                        # Mescla valores lidos com os padrões (incluindo atalhos aninhados)
                         for k, v in DEFAULT_CONFIG.items():
-                            self._settings[k] = data.get(k, v)
+                            if isinstance(v, dict):
+                                loaded_sub = data.get(k, {})
+                                if isinstance(loaded_sub, dict):
+                                    merged = dict(v)
+                                    merged.update(loaded_sub)
+                                    self._settings[k] = merged
+                                else:
+                                    self._settings[k] = dict(v)
+                            else:
+                                self._settings[k] = data.get(k, v)
                     else:
                         self._settings = dict(DEFAULT_CONFIG)
             except Exception as e:

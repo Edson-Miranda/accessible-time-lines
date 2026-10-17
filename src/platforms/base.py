@@ -5,7 +5,7 @@ Garante a separação estrita entre obtenção de dados e execução de ações.
 
 from abc import ABC, abstractmethod
 from typing import Callable, List, Optional
-from src.core.models import Post
+from src.core.models import Post, User
 
 
 class BaseTimelineReader(ABC):
@@ -88,4 +88,34 @@ class BaseActionExecutor(ABC):
     @abstractmethod
     def send_dm(self, recipient_username: str, text: str) -> bool:
         """Envia uma mensagem direta (DM) privada para um usuário."""
+        pass
+
+    @abstractmethod
+    def follow_user(self, username: str) -> bool:
+        """Começa a seguir um usuário no serviço."""
+        pass
+
+    @abstractmethod
+    def unfollow_user(self, username: str) -> bool:
+        """Deixa de seguir um usuário no serviço."""
+        pass
+
+    @abstractmethod
+    def block_user(self, username: str) -> bool:
+        """Bloqueia um usuário no serviço."""
+        pass
+
+    @abstractmethod
+    def unblock_user(self, username: str) -> bool:
+        """Desbloqueia um usuário no serviço."""
+        pass
+
+    @abstractmethod
+    def search_users(self, query: str) -> List[User]:
+        """Pesquisa perfis de usuários na plataforma."""
+        pass
+
+    @abstractmethod
+    def fetch_user_timeline(self, username: str) -> List[Post]:
+        """Obtém as publicações recentes da linha do tempo de um usuário específico."""
         pass

@@ -6,6 +6,30 @@ Projetados para serem agnósticos de plataforma.
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional
+from src.core.config import config_manager
+
+
+@dataclass
+class User:
+    """Representa um perfil de usuário na plataforma."""
+    id: str
+    name: str
+    username: str
+    bio: str = ""
+    followers_count: int = 0
+    following_count: int = 0
+    is_following: bool = False
+    is_blocked: bool = False
+    profile_image_url: str = ""
+    url: str = ""
+
+    def to_accessible_summary(self) -> str:
+        """Formata o perfil do usuário para leitura limpa por leitor de tela."""
+        status_part = "[Seguindo]" if self.is_following else "[Não seguido]"
+        if self.is_blocked:
+            status_part = "[Bloqueado]"
+        bio_part = f" • Bio: {self.bio}" if self.bio else ""
+        return f"{self.name} (@{self.username}) {status_part}{bio_part}"
 
 
 @dataclass
@@ -149,37 +173,70 @@ class Post:
             return format_relative_time(self.created_at, now=now)
         return self.created_at_str
 
-    def to_accessible_summary(self) -> str:
+    def to_accessible_summary(
+        self,
+        author_format: Optional[str] = None,
+        time_format: Optional[str] = None,
+        show_metrics: Optional[bool] = None
+    ) -> str:
         """
         Retorna o texto da publicação para anúncio natural na lista pelo leitor de tela.
-        Lê o post completo sem truncar, normalizando quebras de linha em espaços.
-        Exibe tempo relativo amigável no estilo TWBlue (ex.: '2 horas atrás', '3 semanas atrás').
+        Suporta os formatos customizáveis de exibição do autor, data/hora e métricas (estilo TWBlue).
         """
+        if author_format is None:
+            author_format = config_manager.get("author_display_format", "name_and_username")
+        if time_format is None:
+            time_format = config_manager.get("time_display_format", "relative")
+        if show_metrics is None:
+            show_metrics = config_manager.get("show_metrics_in_summary", True)
+
+        # Formatação do autor
+        if author_format == "name_only":
+            author_str = self.author_name
+        elif author_format == "username_only":
+            author_str = f"@{self.author_username}"
+        elif author_format == "username_and_name":
+            author_str = f"@{self.author_username} ({self.author_name})"
+        else:  # name_and_username (padrão)
+            author_str = f"{self.author_name} (@{self.author_username})"
+
+        # Formatação de data/hora
+        rel_time = self.get_relative_time()
+        if time_format == "absolute":
+            time_str = self.created_at_str
+        elif time_format == "both":
+            if rel_time and self.created_at_str:
+                time_str = f"{rel_time} ({self.created_at_str})"
+            else:
+                time_str = rel_time or self.created_at_str
+        else:  # relative (padrão)
+            time_str = rel_time or self.created_at_str
+
+        time_part = f", {time_str}" if time_str else ""
+
         prefix = ""
         if self.is_retweet and self.retweeted_by:
             prefix = f"[Repost de {self.retweeted_by}] "
         elif self.is_reply and self.replying_to:
             prefix = f"[Respondendo a @{self.replying_to}] "
 
-        rel_time = self.get_relative_time()
-        time_part = f", {rel_time}" if rel_time else ""
-        
-        # Normalizar quebras de linha em espaços para leitura contínua e fluida pelo leitor de tela
         clean_text = " ".join(self.text.split())
 
-        metrics = []
-        if self.like_count > 0:
-            metrics.append(f"{self.like_count} curtida" if self.like_count == 1 else f"{self.like_count} curtidas")
-        if self.retweet_count > 0:
-            metrics.append(f"{self.retweet_count} repost" if self.retweet_count == 1 else f"{self.retweet_count} reposts")
-        if self.reply_count > 0:
-            metrics.append(f"{self.reply_count} resposta" if self.reply_count == 1 else f"{self.reply_count} respostas")
-        if self.has_media:
-            metrics.append(self.media_summary)
+        metrics_part = ""
+        if show_metrics:
+            metrics = []
+            if self.like_count > 0:
+                metrics.append(f"{self.like_count} curtida" if self.like_count == 1 else f"{self.like_count} curtidas")
+            if self.retweet_count > 0:
+                metrics.append(f"{self.retweet_count} repost" if self.retweet_count == 1 else f"{self.retweet_count} reposts")
+            if self.reply_count > 0:
+                metrics.append(f"{self.reply_count} resposta" if self.reply_count == 1 else f"{self.reply_count} respostas")
+            if self.has_media:
+                metrics.append(self.media_summary)
+            if metrics:
+                metrics_part = f" • {', '.join(metrics)}"
 
-        metrics_part = f" • {', '.join(metrics)}" if metrics else ""
-
-        return f"{prefix}{self.author_name} (@{self.author_username}){time_part}: {clean_text}{metrics_part}"
+        return f"{prefix}{author_str}{time_part}: {clean_text}{metrics_part}"
 
     def to_accessible_full(self) -> str:
         """

@@ -9,10 +9,12 @@ from typing import Dict, List
 import wx
 from src.core.models import Post
 from src.core.timeline_store import TimelineStore
+from src.core.config import config_manager
 from src.platforms.x_twitter.reader import XTimelineReader
 from src.platforms.x_twitter.executor import XActionExecutor
 from src.ui.main_window import MainWindow
 from src.audio.manager import sound_manager
+from src.audio.speech import speech_manager
 
 logger = logging.getLogger("AccessibleTimeline.App")
 
@@ -27,6 +29,7 @@ class AccessibleTimelineApp(wx.App):
             "following": TimelineStore(),
             "mentions": TimelineStore(),
             "dms": TimelineStore(),
+            "sent": TimelineStore(),
         }
 
         self.reader = XTimelineReader()
@@ -52,6 +55,8 @@ class AccessibleTimelineApp(wx.App):
                 target = "mentions"
             elif target in ("messages", "dms"):
                 target = "dms"
+            elif target == "sent":
+                target = "sent"
             elif target != "following":
                 target = "for_you"
 
@@ -62,10 +67,18 @@ class AccessibleTimelineApp(wx.App):
                     logger.info(f"{added} novas postagens adicionadas ao fluxo '{target}'.")
                     if target == "mentions":
                         sound_manager.play_mention_received()
+                        if config_manager.get("speak_new_mentions", True) and posts:
+                            latest = posts[0]
+                            speech_manager.speak(f"Nova menção de {latest.author_name}: {latest.text}", interrupt=False)
                     elif target == "dms":
                         sound_manager.play_dm_received()
+                    elif target == "sent":
+                        sound_manager.play_tweet_sent()
                     else:
                         sound_manager.play_tweet_received()
+                        if config_manager.get("speak_new_tweets", False) and posts:
+                            latest = posts[0]
+                            speech_manager.speak(f"Novo tweet de {latest.author_name}: {latest.text}", interrupt=False)
 
         def on_status_change(status_text: str):
             self.main_window.set_status_message(status_text)
