@@ -1,3 +1,18 @@
+## [0.1.0-dev.19] - 2026-10-17
+
+### Adicionado
+- **Filtro Nativo de Anúncios e Conteúdo Patrocinado (`src/platforms/x_twitter/parser.py`)**:
+  - Implementação da função `_is_promoted_node` para detectar e descartar publicações patrocinadas baseadas em metadados do X (`promotedMetadata`, `promoted_metadata`, `promotedTweet` em `entryId` e tipagens de promoção).
+  - Filtragem e poda de subárvores de anúncios em `walk_and_find_tweets` e `globalObjects`, impedindo que qualquer publicação de propaganda entre nos fluxos da timeline acessível.
+- **Bloqueio de Rotas de Telemetria e Redes de Anúncios (`src/platforms/x_twitter/browser.py`)**:
+  - Implementação da função `setup_adblock_routes` interceptando e abortando requisições para domínios de rastreamento e publicidade (`ads-twitter.com`, `analytics.twitter.com`, `p.twitter.com`, `google-analytics.com`, `googletagmanager.com`, `doubleclick.net`).
+  - Otimização do consumo de banda e aumento da velocidade de carregamento em segundo plano.
+
+### Testes
+- Adição de `test_parse_ignores_promoted_tweets_and_ads` em `tests/test_parser.py` simulando payloads GraphQL com múltiplos tipos de publicações patrocinadas intercaladas com posts legítimos, garantindo a captura exclusiva de postagens reais. Suíte expandida para 37 testes unitários aprovados com 100% de sucesso.
+
+---
+
 ## [0.1.0-dev.18] - 2026-10-16
 
 ### Modificado

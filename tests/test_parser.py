@@ -217,6 +217,161 @@ class TestXParser(unittest.TestCase):
         self.assertEqual(p.author_username, "amigodev")
         self.assertIn("https://noticia.com/alvo", p.urls)
 
+    def test_parse_ignores_promoted_tweets_and_ads(self):
+        """Garante que tweets patrocinados (anúncios) sejam completamente descartados pelo parser."""
+        payload = {
+            "data": {
+                "home": {
+                    "home_timeline_ux": {
+                        "timeline": {
+                            "instructions": [
+                                {
+                                    "type": "TimelineAddEntries",
+                                    "entries": [
+                                        # Tweet legítimo de usuário
+                                        {
+                                            "entryId": "tweet-111111",
+                                            "content": {
+                                                "entryType": "TimelineTimelineItem",
+                                                "itemContent": {
+                                                    "itemType": "TimelineTweet",
+                                                    "tweet_results": {
+                                                        "result": {
+                                                            "__typename": "Tweet",
+                                                            "rest_id": "111111",
+                                                            "core": {
+                                                                "user_results": {
+                                                                    "result": {
+                                                                        "legacy": {
+                                                                            "name": "Usuário Real",
+                                                                            "screen_name": "usuarioreal"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            },
+                                                            "legacy": {
+                                                                "created_at": "Wed Oct 14 10:00:00 +0000 2026",
+                                                                "full_text": "Post normal na timeline.",
+                                                                "favorite_count": 10
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        # Anúncio 1: Com promotedMetadata no itemContent
+                                        {
+                                            "entryId": "promoted-tweet-222222",
+                                            "content": {
+                                                "entryType": "TimelineTimelineItem",
+                                                "itemContent": {
+                                                    "itemType": "TimelineTweet",
+                                                    "promotedMetadata": {
+                                                        "advertiserId": "12345",
+                                                        "impressionId": "imp-999"
+                                                    },
+                                                    "tweet_results": {
+                                                        "result": {
+                                                            "__typename": "Tweet",
+                                                            "rest_id": "222222",
+                                                            "core": {
+                                                                "user_results": {
+                                                                    "result": {
+                                                                        "legacy": {
+                                                                            "name": "Marca Patrocinadora",
+                                                                            "screen_name": "marcapatrocinada"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            },
+                                                            "legacy": {
+                                                                "created_at": "Wed Oct 14 11:00:00 +0000 2026",
+                                                                "full_text": "Compre nosso produto agora!",
+                                                                "favorite_count": 500
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        # Anúncio 2: Com promotedTweet no entryId
+                                        {
+                                            "entryId": "promotedTweet-333333",
+                                            "content": {
+                                                "entryType": "TimelineTimelineItem",
+                                                "itemContent": {
+                                                    "itemType": "TimelineTweet",
+                                                    "tweet_results": {
+                                                        "result": {
+                                                            "__typename": "Tweet",
+                                                            "rest_id": "333333",
+                                                            "core": {
+                                                                "user_results": {
+                                                                    "result": {
+                                                                        "legacy": {
+                                                                            "name": "Outro Anúncio",
+                                                                            "screen_name": "anuncio2"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            },
+                                                            "legacy": {
+                                                                "created_at": "Wed Oct 14 12:00:00 +0000 2026",
+                                                                "full_text": "Promoção imperdível de anúncio.",
+                                                                "favorite_count": 2
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        # Anúncio 3: Com promoted_metadata no próprio resultado do tweet
+                                        {
+                                            "entryId": "tweet-444444",
+                                            "content": {
+                                                "entryType": "TimelineTimelineItem",
+                                                "itemContent": {
+                                                    "itemType": "TimelineTweet",
+                                                    "tweet_results": {
+                                                        "result": {
+                                                            "__typename": "Tweet",
+                                                            "rest_id": "444444",
+                                                            "promoted_metadata": {"ad_id": "ad444"},
+                                                            "core": {
+                                                                "user_results": {
+                                                                    "result": {
+                                                                        "legacy": {
+                                                                            "name": "Anúncio Disfarçado",
+                                                                            "screen_name": "ad3"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            },
+                                                            "legacy": {
+                                                                "created_at": "Wed Oct 14 13:00:00 +0000 2026",
+                                                                "full_text": "Texto publicitário.",
+                                                                "favorite_count": 0
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+        posts = parse_x_graphql_response(payload)
+        # Deve ter capturado APENAS o tweet legítimo (id="111111"), descartando todos os 3 anúncios
+        self.assertEqual(len(posts), 1)
+        self.assertEqual(posts[0].id, "111111")
+        self.assertEqual(posts[0].author_name, "Usuário Real")
+        self.assertEqual(posts[0].text, "Post normal na timeline.")
+
 
 if __name__ == "__main__":
     unittest.main()

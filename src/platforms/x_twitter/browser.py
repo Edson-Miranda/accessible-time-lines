@@ -52,6 +52,27 @@ def setup_embedded_browsers_path():
 setup_embedded_browsers_path()
 
 
+def setup_adblock_routes(context: BrowserContext):
+    """
+    Registra interceptadores de rota no contexto do navegador para bloquear
+    serviços conhecidos de telemetria, rastreamento e redes de anúncios.
+    Acelera o carregamento da página e reduz o consumo de banda de rede.
+    """
+    blocked_patterns = [
+        "*ads-twitter.com*",
+        "*analytics.twitter.com*",
+        "*p.twitter.com*",
+        "*google-analytics.com*",
+        "*googletagmanager.com*",
+        "*doubleclick.net*",
+    ]
+    for pattern in blocked_patterns:
+        try:
+            context.route(pattern, lambda route: route.abort())
+        except Exception as e:
+            logger.debug(f"Aviso ao registrar rota de bloqueio para {pattern}: {e}")
+
+
 def is_profile_authenticated(data_dir: str) -> bool:
     """Verifica diretamente se a sessão já está autenticada no banco de cookies."""
     cookie_file = Path(data_dir) / "Default" / "Network" / "Cookies"
@@ -662,6 +683,7 @@ class XBrowserManager:
             with sync_playwright() as pw:
                 try:
                     context: BrowserContext = self._launch_persistent_context_with_fallback(pw, headless=headless)
+                    setup_adblock_routes(context)
                     context.on("response", self._handle_response)
                     page: Page = context.pages[0] if context.pages else context.new_page()
 

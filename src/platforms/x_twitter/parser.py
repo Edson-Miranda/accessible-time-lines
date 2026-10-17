@@ -23,14 +23,42 @@ def _parse_twitter_date(date_str: str) -> tuple[Optional[datetime], str]:
         return None, date_str
 
 
+def _is_promoted_node(data: Any) -> bool:
+    """Verifica se um nó de dados representa anúncio ou conteúdo patrocinado."""
+    if not isinstance(data, dict):
+        return False
+
+    # 1. Metadados explícitos de promoção/anúncio do X
+    if "promotedMetadata" in data or "promoted_metadata" in data:
+        return True
+
+    # 2. Identificador de entrada de timeline indicando promoção
+    entry_id = str(data.get("entryId", "") or data.get("id", ""))
+    if "promoted" in entry_id.lower():
+        return True
+
+    # 3. Tipo do item indicando promoção
+    typename = str(data.get("__typename", "") or data.get("itemType", "") or data.get("entryType", ""))
+    if "promoted" in typename.lower():
+        return True
+
+    return False
+
+
 def _extract_tweet_node(result_obj: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Extrai o nó real do tweet lidando com TweetWithVisibilityResults."""
     if not isinstance(result_obj, dict):
         return None
 
+    if _is_promoted_node(result_obj):
+        return None
+
     typename = result_obj.get("__typename")
     if typename == "TweetWithVisibilityResults":
-        return result_obj.get("tweet")
+        tweet = result_obj.get("tweet")
+        if isinstance(tweet, dict) and not _is_promoted_node(tweet):
+            return tweet
+        return None
     elif typename == "Tweet":
         return result_obj
     elif "legacy" in result_obj:
@@ -40,8 +68,21 @@ def _extract_tweet_node(result_obj: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 def _parse_single_tweet(tweet_data: Dict[str, Any]) -> Optional[Post]:
     """Converte um nó de tweet do GraphQL do X em um objeto Post."""
+    if not isinstance(tweet_data, dict):
+        return None
+
+    if _is_promoted_node(tweet_data):
+        return None
+
     node = _extract_tweet_node(tweet_data)
     if not node:
+        return None
+
+    if _is_promoted_node(node):
+        return None
+
+    legacy = node.get("legacy", {})
+    if isinstance(legacy, dict) and _is_promoted_node(legacy):
         return None
 
     rest_id = node.get("rest_id")
@@ -158,6 +199,8 @@ def parse_x_graphql_response(payload: Dict[str, Any]) -> List[Post]:
             for tid, t_legacy in tweets_dict.items():
                 if tid in seen_ids:
                     continue
+                if isinstance(t_legacy, dict) and _is_promoted_node(t_legacy):
+                    continue
                 u_id = str(t_legacy.get("user_id_str") or t_legacy.get("user_id") or "")
                 u_obj = users_dict.get(u_id, {})
                 simulated_node = {
@@ -184,11 +227,15 @@ def parse_x_graphql_response(payload: Dict[str, Any]) -> List[Post]:
             return
 
         if isinstance(data, dict):
+            # Se for uma entrada ou bloco patrocinado/anúncio, descarta toda a subárvore
+            if _is_promoted_node(data):
+                return
+
             # Se encontrar tweet_results diretamente
             if "tweet_results" in data:
                 tr = data.get("tweet_results", {})
                 res = tr.get("result")
-                if res:
+                if res and not _is_promoted_node(res):
                     p = _parse_single_tweet(res)
                     if p and p.id not in seen_ids:
                         seen_ids.add(p.id)
@@ -198,7 +245,7 @@ def parse_x_graphql_response(payload: Dict[str, Any]) -> List[Post]:
             if "tweetResult" in data:
                 tr = data.get("tweetResult", {})
                 res = tr.get("result")
-                if res:
+                if res and not _is_promoted_node(res):
                     p = _parse_single_tweet(res)
                     if p and p.id not in seen_ids:
                         seen_ids.add(p.id)
